@@ -320,7 +320,7 @@ Otocore_profiles <- Otocore_profiles %>%
 IDOto <- unique(Otocore_profiles$ID)
 Data <- data.frame(IDS = character(), BH = character(), Ages = integer())
 
-#ggpmisc seems to only accept data frames (no tibbles allowed)
+#peakfinder only accepts data frames (no tibbles allowed)
 Otocore_profiles <- as.data.frame(Otocore_profiles)
 
 for (i in 1:length(IDOto)) {
@@ -333,9 +333,9 @@ for (i in 1:length(IDOto)) {
   Data[i,"Ages"] <- A
 }
 
-# Plot peak finding solution
-ggplot(Otocore_profiles[Otocore_profiles$ID == "12",], aes(Distance_um, d18O)) + 
-  geom_line() + stat_peaks(col = "red", ignore_threshold = 0.5, span = 5) + stat_valleys(col = "green")
+# Plot peak finding solution(peaks in red, valleys in green)
+ggplot(Otocore_profiles[Otocore_profiles$ID == "14",], aes(Distance_um, d18O)) + 
+  geom_line()+geom_point() + stat_peaks(col = "red", ignore_threshold = 0.5, span = 5) + stat_valleys(col = "green")+theme_minimal()
 
 # Write table
 write.table(Data, "Data/Automated_count.txt", sep = "\t", dec = ".", row.names = F)

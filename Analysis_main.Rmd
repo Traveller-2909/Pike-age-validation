@@ -189,6 +189,86 @@ ggplot(Aragonite_prediction)+
 
 ```
 
+## 3.2. Obtaining a corroborated age estimation
+```{r establish reference, include=FALSE}
+#Script for precision, accuracy metrics and bias plots of corroborated ages
+
+rm(list = ls())
+
+#Read data
+pikedata <- read.delim("Data/Pike_ages_all_with_TL_backcalulated.txt", header = T, stringsAsFactors = F)
+
+#join
+pikedata <- pikedata%>%
+  transmute(id = id,
+            Age_refAuto = age_ref,
+            Age_refT = age_comb,
+            Age_refC = age_combC)%>%
+  distinct()
+
+#Precision for combined images
+AP_ref_compare <- agePrecision(~Age_refT + Age_refC, data = pikedata)
+summary(AP_ref_compare, what = "precision")
+
+#Bias for combined images, second argument is reference age
+AB_ref_compare <- ageBias(Age_refT~Age_refC, data = pikedata, ref.lab = "comboT",
+                            nref.lab = "comboC")
+summary(AB_ref_compare)
+
+#Precision for automated age
+AP_auto_combo <- agePrecision(~Age_refAuto + Age_refT, data = pikedata)
+AP_auto_comboC <- agePrecision(~Age_refAuto + Age_refC, data = pikedata)
+summary(AP_auto_combo, what = "precision")
+summary(AP_auto_comboC, what = "precision")
+
+#Bias for automated age
+ab_auto_combo <- ageBias(Age_refT ~ Age_refAuto, data = pikedata, ref.lab = "Auto", 
+                         nref.lab = "comboT")
+
+ab_auto_comboC <- ageBias(Age_refC ~ Age_refAuto, data = pikedata, ref.lab = "Auto", 
+                    nref.lab = "comboC")
+
+summary(ab_auto_combo)
+summary(ab_auto_comboC)
+
+save(AP_ref_compare, AB_ref_compare, AP_auto_comboC, AP_auto_combo, ab_auto_comboC, ab_auto_combo, file="Data/Refcompare.RData")
+
+```
+
+```{r Figure 4 Reference age comparison, echo=FALSE, dpi=600, message=F, warning=F}
+
+rm(list = ls())
+
+load("Data/Refcompare.RData")
+
+Refcompare <- ggplot() +
+  geom_hline(yintercept=0,linetype="dashed",color="darkgrey", size = 2) +
+  geom_errorbar(data = ab_auto_combo$bias.diff, 
+                aes(x=Age_refAuto,ymin=LCI,ymax=UCI,color=sig), width = 0)+
+  geom_errorbar(data = ab_auto_comboC$bias.diff, 
+                aes(x=Age_refAuto,ymin=LCI,ymax=UCI,color=sig), width = 0, color = "blue")+
+  geom_point(data = ab_auto_combo$bias.diff, 
+             aes(x=Age_refAuto, y=mean, color=sig, fill=sig),shape=21, size = 2)+
+  geom_point(data = ab_auto_comboC$bias.diff, 
+             aes(x=Age_refAuto, y=mean, color=sig, fill=sig),shape=18, size = 3, color = "blue")+
+  geom_smooth(data=ab_auto_combo$data,aes(x=Age_refAuto,y=diff),size=.65, color = "blue")+
+  geom_smooth(data=ab_auto_comboC$data,aes(x=Age_refAuto,y=diff),size=.65, color = "black")+
+  scale_fill_manual(values=c("black","white"),guide="none") +
+  scale_color_manual(values=c("black","red3"),guide="none") +
+  scale_x_continuous(breaks=0:15) +
+  scale_y_continuous(limits = c(-6,4), breaks=c(-6:4))+
+  ylab("reader age - automated age")+
+  xlab("corroborated age")+
+  theme(panel.background = element_blank(), panel.grid.major = element_line(colour = "grey", linetype = "dotted"),
+        panel.border = element_rect(colour = "black", fill = NA),
+        axis.line = element_line(colour = "black", size = 1),
+        axis.title = element_text(colour = "black", size = 15), 
+        axis.text = element_text(colour = "black", size = 15))
+
+Refcompare
+
+```
+
 ```{r Fraser Lee Backcalculation, include=FALSE, eval=FALSE}
 
 # Script to convert length at capture to length at last increment using Fraser Lee equation
