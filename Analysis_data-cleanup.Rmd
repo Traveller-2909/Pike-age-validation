@@ -1,0 +1,215 @@
+---
+title: "Analysis_data-cleanup"
+author: "TR"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r packages, include=FALSE}
+library(lubridate)
+library(tidyverse)
+library(ggplot2)
+library(ggpubr)
+library(grid)
+```
+
+
+```{r Environmental data cleanup, include=FALSE, eval=FALSE}
+# Load Environmental data
+Lungdata <- read.delim2("Raw_data/LUNG_Temp_Rügensche_Bodden_1970-2018.txt", 
+                      header = T, stringsAsFactors = F)
+# Load d18O time series
+Pike_d18O_pred <- read.delim("Raw_data/d18O_values_Kloster.txt",
+                             header = T, stringsAsFactors = F)
+
+# Filter for temperature and salinity
+Lungdata_T_S <- Lungdata%>%
+  filter(Param_kurz == "W-T"|Parameter=="Wassertemperatur"|Param_kurz == "SAL"|Parameter == "Salzgehalt")
+
+# Clean up weird data points (e.g., empty or switched data)
+Lungdata_T_S <- Lungdata_T_S[-27005,]
+Lungdata_T_S <- Lungdata_T_S[-27004,]
+
+# Transform to wide (note: spread() is deprecated, use pivot_wider() instead if you want to test this chunk)
+Lungdata_T_S <- spread(Lungdata_T_S, Parameter, WERT_berechnet)
+Lungdata_T_S$Salzgehalt <- as.numeric(Lungdata_T_S$Salzgehalt)
+Lungdata_T_S$Wassertemperatur <- as.numeric(Lungdata_T_S$Wassertemperatur)
+
+# Make into data frame with sensible column headers
+Lungdata_T_S_clean <- Lungdata_T_S%>%
+  group_by(DATUM_Uhrzeit, TIEFE)%>%
+  mutate(temperature = mean(Wassertemperatur, na.rm = T),
+         salinity = mean(Salzgehalt, na.rm = T))%>%
+  ungroup()%>%
+  transmute(mstnr = MstNr,
+            station = substr(Messstelle,1,3),
+            year = Jahr,
+            day = Tag,
+            month = Monat,
+            temperature =temperature,
+            salinity = salinity,
+            unit = Einheit,
+            depth = TIEFE,
+            Lat = HW_GEO,
+            Long = RW_GEO,
+            turbidity = SICHTTIEFE)%>%
+  distinct()
+
+# correct for shift in columns
+Lungdata_T_S_clean[grepl("DB", Lungdata_T_S_clean$station),]$turbidity <- Lungdata_T_S_clean[grepl("DB", Lungdata_T_S_clean$station),]$Long
+Lungdata_T_S_clean[grepl("DB", Lungdata_T_S_clean$station),]$Long <- Lungdata_T_S_clean[grepl("DB", Lungdata_T_S_clean$station),]$Lat
+Lungdata_T_S_clean[grepl("DB", Lungdata_T_S_clean$station),]$Lat <- Lungdata_T_S_clean[grepl("DB", Lungdata_T_S_clean$station),]$depth
+Lungdata_T_S_clean[grepl("DB", Lungdata_T_S_clean$station),]$depth <- Lungdata_T_S_clean[grepl("DB", Lungdata_T_S_clean$station),]$unit
+Lungdata_T_S_clean[grepl("DB", Lungdata_T_S_clean$station),]$unit <- paste("°C")
+
+# Correct false coordinates for measuring buoy GB1
+Lungdata_T_S_clean[grepl("GB1", Lungdata_T_S_clean$station),]$Lat <- "54.18833"
+Lungdata_T_S_clean[grepl("GB1", Lungdata_T_S_clean$station),]$Long <- "13.775"
+
+str(Lungdata_T_S_clean)
+
+Lungdata_T_S_clean$depth <- as.numeric(Lungdata_T_S_clean$depth)
+Lungdata_T_S_clean$turbidity <- as.numeric(Lungdata_T_S_clean$turbidity)
+Lungdata_T_S_clean$Lat <- as.numeric(Lungdata_T_S_clean$Lat)
+Lungdata_T_S_clean$Long <- as.numeric(Lungdata_T_S_clean$Long)
+
+#Form monthly means
+Lungdata_T_S_month <- Lungdata_T_S_clean%>%
+  group_by(station, year, month, depth)%>%
+  summarise(year = year,
+            temperature = mean(temperature),
+            salinity = mean(salinity),
+            depth = factor(ifelse(depth > 1.5, 0, 1), levels = c(0,1), 
+                           labels = c("bottom", "surface")),
+            Lat = first(Lat),
+            Long = first(Long),
+            turbidity = mean(turbidity))%>%
+  ungroup()%>%
+  distinct()
+
+#Turbidity unnecessary, remove
+Lungdata_T_S_month2 <- Lungdata_T_S_month%>%
+  group_by(station, year, month, depth)%>%
+  summarise(temperature = mean(temperature),
+            salinity = mean(salinity),
+            Lat = first(Lat),
+            Long = first(Long))%>%
+  distinct()%>%
+  ungroup()
+
+# Make single data frames for study lagoons (filter based on known geographical extent of the measuring buoys covering a given area)
+Months_WRB <- Lungdata_T_S_month2%>%
+  filter(Lat >= 54.40167 & Lat <= 54.62333)%>%
+  filter(Long > 13.05 & Long < 13.17833)%>%
+  filter(year >= 2020-15)%>%
+  group_by(station, month, depth)%>%
+  summarise(temperature = median(temperature),
+            salinity = median(salinity),
+            Lat = Lat,
+            Long = Long,
+            depth = depth,
+            area = "WRB")%>%
+  distinct()
+
+Months_NRB <- Lungdata_T_S_month2%>%
+  filter(Lat >= 54.50667 & Lat <= 54.56333)%>%
+  filter(Long >= 13.17833 & Long <= 13.49)%>%
+  filter(year >= 2020-15)%>%
+  group_by(station, month, depth)%>%
+  group_by(station, month, depth)%>%
+  summarise(temperature = median(temperature),
+            salinity = median(salinity),
+            Lat = Lat,
+            Long = Long,
+            depth = depth,
+            area = "WRB")%>%
+  distinct()
+
+Months_GB <- Lungdata_T_S_month2%>%
+  filter(Lat >= 54.15 & Lat <= 54.26667)%>%
+  filter(Long >= 13.48333  & Long <= 13.775 )%>%
+  filter(year >= 2020-15)%>%
+  group_by(station, month, depth)%>%
+  summarise(temperature = median(temperature),
+            salinity = median(salinity),
+            Lat = Lat,
+            Long = Long,
+            depth = depth,
+            area = "WRB")%>%
+  distinct()
+
+# Data frame of average monthly temperature & salinity of WRB lagoon chain (where timeseries of d18O was recorded)
+WRB_average <- Months_WRB%>%
+  ungroup()%>%
+  group_by(month)%>%
+  summarise(temperature = mean(temperature),
+            salinity = mean(salinity))
+
+#Combine into one data frame covering only the study area
+Months_areas <- rbind(Months_GB, Months_NRB, Months_WRB)
+
+# Rename column of d18O timeseries dataframe
+Pike_d18O_pred <- Pike_d18O_pred%>%
+  transmute(date = Sampling.date,
+            salinity = Salinity,
+            temperature = Water.temp,
+            d18O = d18O..permil.,
+            Lat = Lat,
+            Long = Long)
+
+# Convert date format to month
+Pike_d18O_pred$month <- lubridate::month(parse_date_time(Pike_d18O_pred$date, orders = c("dmy")))
+Pike_d18O_pred$date <- lubridate::as_date(parse_date_time(Pike_d18O_pred$date, orders = c("dmy")))
+
+# Join with open lagoon monthly means
+Pike_d18O_pred <- Pike_d18O_pred %>% inner_join(WRB_average, by = "month")
+
+# Insert temperature measurements into equation 2 (Geffen et al.) to generate predicted d18O values for otolith aragonite
+# Calculate alpha for open lagoon & harbor temperatures
+Pike_d18O_pred$alpha1 = exp((15.99*1000*((Pike_d18O_pred$temperature.x+273.15)^-1)-24.25)/1000)
+Pike_d18O_pred$alpha2 = exp((15.99*1000*((Pike_d18O_pred$temperature.y+273.15)^-1)-24.25)/1000)
+
+# Predict d18O for open lagoon and harbor temperatures
+Pike_d18O_pred$d18O_Oto_1 = 0.97001*(Pike_d18O_pred$alpha1*(1000+Pike_d18O_pred$d18O)-1000)-29.99
+Pike_d18O_pred$d18O_Oto_2 = 0.97001*(Pike_d18O_pred$alpha2*(1000+Pike_d18O_pred$d18O)-1000)-29.99
+
+# Insert temperature measurements into equation 1 (Patterson et al.) to generate predicted d18O values for otolith aragonite
+# Calculate alpha for open lagoon & harbor temperatures
+Pike_d18O_pred$alpha3 = exp((18.56*1000*((Pike_d18O_pred$temperature.x+273.15)^-1)-33.49)/1000)
+Pike_d18O_pred$alpha4 = exp((18.56*1000*((Pike_d18O_pred$temperature.y+273.15)^-1)-33.49)/1000)
+
+# Predict d18O for open lagoon and harbor temperatures
+Pike_d18O_pred$d18O_Oto_3 = 0.97001*(Pike_d18O_pred$alpha3*(1000+Pike_d18O_pred$d18O)-1000)-29.99
+Pike_d18O_pred$d18O_Oto_4 = 0.97001*(Pike_d18O_pred$alpha4*(1000+Pike_d18O_pred$d18O)-1000)-29.99
+
+# Write into clean dataframe
+Aragonite_prediction <- Pike_d18O_pred%>%
+  transmute(month = month,
+            date = date,
+            salinity_shore = salinity.x,
+            temperature_shore = temperature.x,
+            salinity_open = salinity.y,
+            temperature_open = temperature.y,
+            d18O_station = d18O,
+            Prediction_Geffen_station_VPDB = d18O_Oto_1,
+            Prediction_Patterson_station_VPDB = d18O_Oto_3,
+            Prediction_Geffen_WRB_VPDB = d18O_Oto_2,
+            Prediction_Patterson_WRB_VPDB = d18O_Oto_4,
+            Lat_station = Lat,
+            Long_station = Long)%>%
+  drop_na()
+
+# Write data files for main analysis
+write.table(Months_areas, "Data/Mean-TS_lagoons.txt", row.names = F, 
+            sep = "\t", dec = ".")
+write.table(Months_GB, "Data/Mean-TS_GB.txt", row.names = F, sep = "\t", dec = ".")
+write.table(Months_NRB, "Data/Mean-TS_NRB.txt", row.names = F, sep = "\t", dec = ".")
+write.table(Months_WRB, "Data/Mean-TS_WRB.txt", row.names = F, sep = "\t", dec = ".")
+write.table(Aragonite_prediction, "Data/Predicted_otolith_d18O.txt", row.names = F,
+            sep = "\t", dec = ".")
+```
+
