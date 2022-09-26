@@ -1041,3 +1041,62 @@ Curves <- ggarrange(Curve_ref, Curve_oto, Curve_scale, ncol = 3, nrow = 1,
                     labels = c("A)", "B)", "C)"), label.x = 0, font.label = list(size = 15))
 Curves
 ```
+
+```{r Table 2 growthtable, echo=FALSE, warning=FALSE, message=FALSE, error=FALSE}
+# Script to concatenate growth data into table
+
+rm(list = ls())
+
+#load data
+load("Data/Growthmodel.RData")
+
+CI1LInf <- quantile(extract(fit_ref, pars = "LInf")[[1]], probs = c(0.05, 0.95))
+CI2LInf <- quantile(extract(fit_oto, pars = "LInf")[[1]], probs = c(0.05, 0.95))
+CI3LInf <- quantile(extract(fit_scale, pars = "LInf")[[1]], probs = c(0.05, 0.95))
+
+CIsLInf <- rbind(CI1LInf, CI2LInf, CI3LInf)
+
+SDsLInf <- CIsLInf[,2]-CIsLInf[,1]
+
+CI1k <- quantile(extract(fit_ref, pars = "k")[[1]], probs = c(0.05, 0.95))
+CI2k <- quantile(extract(fit_oto, pars = "k")[[1]], probs = c(0.05, 0.95))
+CI3k <- quantile(extract(fit_scale, pars = "k")[[1]], probs = c(0.05, 0.95))
+
+CIsk <- rbind(CI1k, CI2k, CI3k)
+
+SDsk <- CIsk[,2]-CIsk[,1]
+
+CI1tZero <- quantile(extract(fit_ref, pars = "tZero")[[1]], probs = c(0.05, 0.95))
+CI2tZero <- quantile(extract(fit_oto, pars = "tZero")[[1]], probs = c(0.05, 0.95))
+CI3tZero <- quantile(extract(fit_scale, pars = "tZero")[[1]], probs = c(0.05, 0.95))
+
+CIstZero <- rbind(CI1tZero, CI2tZero, CI3tZero)
+
+SDstZero <- CIstZero[,2]-CIstZero[,1]
+
+Overview <- rbind(c(mean(samples_ref[,c(1)]), mean(samples_ref[,c(2)]), mean(samples_ref[,c(3)])),
+                  c(mean(samples_oto[,c(1)]), mean(samples_oto[,c(2)]), mean(samples_oto[,c(3)])),
+                  c(mean(samples_scale[,c(1)]), mean(samples_scale[,c(2)]), mean(samples_scale[,c(3)])))
+                  
+
+Overview <- data.frame(Overview)
+Overview$sample <- c("Corroborated age", "Otolith age estimate", "Scale age estimate")
+Overview$N <- 86
+
+Overview$LInf <- paste(round(Overview$X1,1), "\u00B1", .5*(round(SDsLInf, 1)))
+Overview$k <- paste(round(Overview$X2,2), "\u00B1", .5*(round(SDsk, 2)))
+Overview$tZero <- paste(round(Overview$X3,1), "\u00B1", .5*(round(SDstZero, 1)))
+
+
+
+Overviewtable <- flextable(Overview, col_keys = c("sample", "N", "LInf", "k", "tZero"))%>%
+  fontsize(part = "header", size = 10)%>%
+  bold(part = "header")%>%
+  set_header_labels(sample = "Sample", LInf = "L \u221E [cm]", 
+                                   k = "Body growth coefficient k", tZero = "Age at size 0 [yr]", N = "N")%>%
+  set_table_properties(width = 0.99, layout = "autofit")%>%
+  theme_vanilla()%>%
+  set_caption("Summary of VBGF paramteters from different aging methods")
+
+Overviewtable
+```
