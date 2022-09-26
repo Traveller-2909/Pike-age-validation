@@ -16,9 +16,10 @@ library(ggplot2)
 library(ggpubr)
 library(grid)
 library(ggpmisc)
+library(foreign)
 ```
 
-**This MD file largely consists of code that has been written and concatenated over longer time spans and may include deprecated functions, dirty workarounds, hacks and terribly laborious solutions to easy problems. I did my best to annotate it so people can understand it and shake their heads over my inadequacy ;), but in case you have questions on particularly sketchy sections, don´t hesitate to ask!**
+**This MD file largely consists of code that has been written and concatenated over longer time spans and may include deprecated functions, dirty workarounds, hacks and terribly laborious solutions to simple problems that I could not figure out any other way at the time. I did my best to annotate it thoroughly so people can understand it and shake their heads over this terrible mess ;). In case you have questions on particularly sketchy sections, don´t hesitate to ask!**
 
 ```{r Environmental data cleanup, include=FALSE, eval=FALSE}
 rm(list = ls())
@@ -338,6 +339,506 @@ ggplot(Otocore_profiles[Otocore_profiles$ID == "14",], aes(Distance_um, d18O)) +
   geom_line()+geom_point() + stat_peaks(col = "red", ignore_threshold = 0.5, span = 5) + stat_valleys(col = "green")+theme_minimal()
 
 # Write table
-write.table(Data, "Data/Automated_count.txt", sep = "\t", dec = ".", row.names = F)
+write.table(Data, "Raw_data/Automated_count.txt", sep = "\t", dec = ".", row.names = F)
 ```
+
+```{r age data cleanup, include=FALSE, eval=FALSE}
+rm(list = ls())
+
+#Load automated age count
+Autoage <- read.delim("Raw_data/Automated_count.txt", header = T, 
+                      stringsAsFactors = F)
+
+#Combined age Reader 1 lagoon pike (otolith + d18O plots)
+pikeages_otoplot1 <- read.delim("Raw_data/Otolith_combo.txt", header = T, stringsAsFactors = F)
+
+#Decoder needed as IDs are randomized
+decoder_oto2 <- read.delim("Raw_data/Decoding_file_05-10-21_BH-00670-90307_Otoliths.txt", header = T, stringsAsFactors = F)
+
+#Combined age Reader 1 tributary pike (otolith + d18O plots)
+pikeages_ana_combo <- read.delim("Raw_data/combined_anadromous.txt", header = T, stringsAsFactors = F)
+
+#Decoder
+decoder_ana <- read.delim("Raw_data/Decoding_file_12-10-21_BH-00670-90307_Otoliths.txt", header = T, stringsAsFactors = F)
+
+#Scales reader 1
+pikeages_scales1 <- read.delim("Raw_data/Scales_round_2.txt", header = T, stringsAsFactors = F)
+pikeages_scales2 <- read.delim("Raw_data/Scales_round_3.txt", header = T, stringsAsFactors = F)
+pikeages_scales3 <- read.delim("Raw_data/Scales_round_4.txt", header = T, stringsAsFactors = F)
+pikeages_scales_korbi <- read.delim("Raw_data/Scales_round_K.txt", header = T, stringsAsFactors = F)
+
+#Decoder for scales
+decoder_scales <- read.delim("Raw_data/Decoding_file_27-08-21_BH-00355-91328.txt", header = T, stringsAsFactors = F)
+pikeages_scales4 <- read.delim("Raw_data/Scales_round5.txt", header = T, stringsAsFactors = F)
+decoder_scales2 <- read.delim("Raw_data/Decoding_file_06-10-21_BH-00670-90307_Scales_round2.txt", header = T, stringsAsFactors = F)
+
+
+#Otoliths reader 1
+pikeages_oto_only2 <- read.delim("Raw_data/Oto_only_round1.2.txt", header = T, stringsAsFactors = F)
+decoder_oto_only2 <- read.delim("Raw_data/Decoding_file_10-09-21_BH-00670-90307.txt", header = T, stringsAsFactors = F)
+pikeages_ana_oto <- read.delim("Raw_data/Oto_anadromous.txt", header = T, stringsAsFactors = F)
+
+#Otoliths Clive
+pikeages_oto_onlyC <- read.table("Raw_data/otolith_only_clive.csv", header = T, sep = ",", stringsAsFactors = F)
+decoder_oto_onlyC <- read.delim("Raw_data/Decoding_file_10-09-21_BH-00670-90307.txt", header = T, stringsAsFactors = F)
+pikeages_combC <- read.csv2("Raw_data/CT_combined_output.csv", header = T, sep = ",", stringsAsFactors = F)
+decoder_combC <- read.delim("Raw_data/Decoding_file_10-09-21_BH-00670-90307.txt", header = T, stringsAsFactors = F)
+
+#Otoliths Corbi
+pikeages_oto_onlyK1 <- read.table("Raw_data/Otolith Parameters Bodden.csv", header = T, sep = ",", stringsAsFactors = F)
+pikeages_oto_onlyK2 <- read.table("Raw_data/Otolith Parameters Ana.csv", header = T, sep = ",", stringsAsFactors = F)
+decoder_oto_onlyK1 <- read.delim("Raw_data/Decoding_file_10-09-21_BH-00670-90307.txt", header = T, stringsAsFactors = F)
+decoder_oto_onlyK2 <- read.delim("Raw_data/Decoding_file_12-10-21_BH-00670-90307_Otoliths.txt", header = T, stringsAsFactors = F)
+
+#lowercase all column names
+
+names(pikeages_otoplot1) <- tolower(names(pikeages_otoplot1))
+names(pikeages_scales_korbi) <- tolower(names(pikeages_scales_korbi))
+names(pikeages_scales1) <- tolower(names(pikeages_scales1))
+names(pikeages_scales2) <- tolower(names(pikeages_scales2))
+names(pikeages_scales3) <- tolower(names(pikeages_scales3))
+names(decoder_oto2) <- tolower(names(decoder_oto2))
+names(decoder_scales) <- tolower(names(decoder_scales))
+names(pikeages_scales4) <- tolower(names(pikeages_scales4))
+names(decoder_scales2) <- tolower(names(decoder_scales2))
+names(pikeages_oto_only2) <- tolower(names(pikeages_oto_only2))
+names(decoder_oto_only2) <- tolower(names(decoder_oto_only2))
+names(decoder_ana) <- tolower(names(decoder_ana))
+names(pikeages_ana_combo) <- tolower(names(pikeages_ana_combo))
+names(pikeages_ana_oto) <- tolower(names(pikeages_ana_oto))
+names(pikeages_oto_onlyC) <- tolower(names(pikeages_oto_onlyC))
+names(decoder_oto_onlyC) <- tolower(names(decoder_oto_onlyC))
+names(pikeages_oto_onlyK1) <- tolower(names(pikeages_oto_onlyK1))
+names(pikeages_oto_onlyK2) <- tolower(names(pikeages_oto_onlyK2))
+names(decoder_oto_onlyK1) <- tolower(names(decoder_oto_onlyK1))
+names(decoder_oto_onlyK2) <- tolower(names(decoder_oto_onlyK2))
+names(pikeages_combC) <- tolower(names(pikeages_combC))
+names(decoder_combC) <- tolower(names(decoder_combC))
+
+#Change column samples to RID for inner join (=decoding)
+#Otoliths
+pikeages_otoplot1$random_id <- pikeages_otoplot1$sample
+pikeages_oto_only2$random_id <- pikeages_oto_only2$sample
+pikeages_ana_combo$random_id <- pikeages_ana_combo$sample
+pikeages_ana_oto$random_id <- pikeages_ana_oto$sample
+decoder_ana$sims_id <- (decoder_ana$sims_id)
+pikeages_oto_onlyC$random_id <- pikeages_oto_onlyC$sample
+pikeages_oto_onlyK1$random_id <- pikeages_oto_onlyK1$sample
+pikeages_oto_onlyK2$random_id <- pikeages_oto_onlyK2$sample
+pikeages_combC$random_id <- pikeages_combC$sample
+
+#Scales read with normal ObjectJ
+pikeages_scales1$random_id <- as.integer(sub(".tif", "", pikeages_scales1$id))
+pikeages_scales2$random_id <- as.integer(sub(".tif", "", pikeages_scales2$id))
+
+#Scales renaming if read with OtoJ
+pikeages_scales3$random_id <- pikeages_scales3$sample
+pikeages_scales4$random_id <- pikeages_scales4$sample
+pikeages_scales_korbi$random_id <- pikeages_scales_korbi$sample
+
+#join decoders to randomized tables using random ID (lagoon pike) Reader 1
+pikeages_otoplot1 <- pikeages_otoplot1 %>% inner_join(decoder_oto2, by = "random_id")
+pikeages_oto_only2 <- pikeages_oto_only2 %>% inner_join(decoder_oto_only2, by = "random_id")
+
+#Reader 3
+pikeages_oto_onlyC <- pikeages_oto_onlyC %>% inner_join(decoder_oto_onlyC, by = "random_id")
+pikeages_combC <- pikeages_combC %>% inner_join(decoder_combC, by = "random_id")
+
+#Reader 2
+pikeages_oto_onlyK1 <- pikeages_oto_onlyK1 %>% inner_join(decoder_oto_onlyK1, by = "random_id")
+pikeages_oto_onlyK2 <- pikeages_oto_onlyK2 %>% inner_join(decoder_oto_onlyK2, by = "random_id")
+pikeages_oto_onlyK <- rbind(pikeages_oto_onlyK1, pikeages_oto_onlyK2)
+
+#Tributary fish from Reader 1
+pikeages_ana_combo <- pikeages_ana_combo %>% inner_join(decoder_ana, by = "random_id")
+pikeages_ana_oto <- pikeages_ana_oto %>% inner_join(decoder_ana, by = "random_id")
+
+#Scales reader 1
+pikeages_scales1 <- pikeages_scales1 %>% inner_join(decoder_scales, by = "random_id")
+pikeages_scales2 <- pikeages_scales2 %>% inner_join(decoder_scales, by = "random_id")
+pikeages_scales3 <- pikeages_scales3 %>% inner_join(decoder_scales, by = "random_id")
+pikeages_scales4 <- pikeages_scales4 %>% inner_join(decoder_scales2, by = "random_id")
+
+#Scales reader 2
+pikeages_scales_korbi <- pikeages_scales_korbi %>% inner_join(decoder_scales, by = "random_id")
+
+
+pikeages_otoplot1 <- rbind(pikeages_otoplot1, pikeages_ana_combo)
+pikeages_oto_only2 <- rbind(pikeages_oto_only2, pikeages_ana_oto)
+
+#cleanup
+#Otoliths
+pikeages_otoplot1 <- pikeages_otoplot1 %>%
+  group_by(id)%>%
+  mutate(trad = aggregate(increment, by = list(Category = id), FUN = sum, na.rm = T)) %>%
+  ungroup() %>%
+  transmute(id = as.factor(id),
+            sims_id = sims_id,
+            quality = quality,
+            age = age,
+            inci = i,
+            trad = trad,
+            increment = ifelse(age == 0, increment, ifelse(i == "edge", NA, increment)))%>%
+  group_by(id) %>%
+  mutate(mrad = aggregate(increment, by = list(Category = id), FUN = sum, na.rm = T))
+
+pikeages_otoplot1 <- pikeages_otoplot1 %>%
+  transmute(id = id,
+            sims_id = sims_id,
+            age = age,
+            agei = inci,
+            increment = increment/1000,
+            mrad = mrad$x/1000,
+            trad = trad$x/1000,
+            quality = quality)
+
+pikeages_oto_only2 <- pikeages_oto_only2 %>%
+  group_by(id)%>%
+  mutate(trad = aggregate(increment, by = list(Category = id), FUN = sum, na.rm = T)) %>%
+  ungroup() %>%
+  transmute(id = as.factor(id),
+            quality = quality,
+            age = age,
+            inci = i,
+            trad = trad,
+            increment = ifelse(age == 0, increment, ifelse(i == "edge", NA, increment)))%>%
+  group_by(id) %>%
+  mutate(mrad = aggregate(increment, by = list(Category = id), FUN = sum, na.rm = T))
+
+#Otoliths reader 3
+pikeages_oto_onlyC <- pikeages_oto_onlyC %>%
+  group_by(id)%>%
+  mutate(trad = aggregate(increment, by = list(Category = id), FUN = sum, na.rm = T)) %>%
+  ungroup() %>%
+  transmute(id = as.factor(id),
+            sims_id = sims_id,
+            quality = quality,
+            age = age,
+            inci = i,
+            trad = trad,
+            increment = ifelse(age == 0, increment, ifelse(i == "edge", NA, increment)))%>%
+  group_by(id) %>%
+  mutate(mrad = aggregate(increment, by = list(Category = id), FUN = sum, na.rm = T))
+
+pikeages_oto_onlyC <- pikeages_oto_onlyC %>%
+  transmute(id = id,
+            sims_id = sims_id,
+            age = age,
+            agei = inci,
+            increment = increment/1000,
+            mrad = mrad$x/1000,
+            trad = trad$x/1000,
+            quality = quality)
+
+pikeages_combC$increment <- as.numeric(pikeages_combC$increment)
+
+pikeages_combC <- pikeages_combC %>%
+  group_by(id)%>%
+  mutate(trad = aggregate(increment, by = list(Category = id), FUN = sum, na.rm = T)) %>%
+  ungroup() %>%
+  transmute(id = as.factor(id),
+            sims_id = sims_id,
+            quality = quality,
+            age = age,
+            inci = i,
+            trad = trad,
+            increment = ifelse(age == 0, increment, ifelse(i == "edge", NA, increment)))%>%
+  group_by(id) %>%
+  mutate(mrad = aggregate(increment, by = list(Category = id), FUN = sum, na.rm = T))
+
+pikeages_combC <- pikeages_combC %>%
+  transmute(id = id,
+            sims_id = sims_id,
+            age = age,
+            agei = inci,
+            increment = increment/1000,
+            mrad = mrad$x/1000,
+            trad = trad$x/1000,
+            quality = quality)
+
+#Otoliths reader 2
+pikeages_oto_onlyK <- pikeages_oto_onlyK %>%
+  group_by(id)%>%
+  mutate(trad = aggregate(increment, by = list(Category = id), FUN = sum, na.rm = T)) %>%
+  ungroup() %>%
+  transmute(id = as.factor(id),
+            quality = quality,
+            age = age,
+            inci = i,
+            trad = trad,
+            increment = ifelse(age == 0, increment, ifelse(i == "edge", NA, increment)))%>%
+  group_by(id) %>%
+  mutate(mrad = aggregate(increment, by = list(Category = id), FUN = sum, na.rm = T))
+
+pikeages_oto_onlyK <- pikeages_oto_onlyK %>%
+  transmute(id = id,
+            age = age,
+            agei = inci,
+            increment = increment/1000,
+            mrad = mrad$x/1000,
+            trad = trad$x/1000,
+            quality = quality)
+
+#Scales
+
+#Transform scales into long format
+pikeages_scales_1_long <- gather(pikeages_scales1, agei, rad, r1:r15) %>% arrange(id.y, agei)
+pikeages_scales_1_long$magni <- as.numeric(pikeages_scales_1_long$magni)
+pikeages_scales_2_long <- gather(pikeages_scales2, agei, rad, r1:r15) %>% arrange(id.y, agei)
+pikeages_scales_2_long$magni <- as.numeric(pikeages_scales_2_long$magni)
+
+#cleanup scales
+scales_clean_1 <- pikeages_scales_1_long %>%
+  group_by(id.y, image) %>%
+  mutate(mrad = aggregate(rad, by = list(Category = id.y), FUN = sum, na.rm = T)) %>%
+  ungroup()%>%
+  transmute(id = as.factor(id.y),
+            image = image,
+            age = age,
+            agei = agei,
+            inci = case_when(magni %in% 0.63 ~ rad/189.479,
+                             magni %in% 0.80 ~ rad/241,
+                             magni %in% 1.00 ~ rad/300.4844,
+                             magni %in% 1.25 ~ rad/375.4688),
+            mrad = case_when(magni %in% 0.63 ~ mrad$x/189.479,
+                             magni %in% 0.80 ~ mrad$x/241,
+                             magni %in% 1.00 ~ mrad$x/300.4844,
+                             magni %in% 1.25 ~ mrad$x/375.4688),
+            trad = case_when(magni %in% 0.63 ~ rscale/189.479,
+                             magni %in% 0.80 ~ rscale/241,
+                             magni %in% 1.00 ~ rscale/300.4844,
+                             magni %in% 1.25 ~ rscale/375.4688),
+            pisc = case_when(magni %in% 0.63 ~ piscivory/189.479,
+                             magni %in% 0.80 ~ piscivory/241,
+                             magni %in% 1.00 ~ piscivory/300.4844,
+                             magni %in% 1.25 ~ piscivory/375.4688)
+            )
+
+scales_clean_2 <- pikeages_scales_2_long %>%
+  group_by(id.y, image) %>%
+  mutate(mrad = aggregate(rad, by = list(Category = id.y), FUN = sum, na.rm = T)) %>%
+  ungroup()%>%
+  transmute(id = as.factor(id.y),
+            image = image,
+            age = age,
+            agei = agei,
+            inci = case_when(magni %in% 0.63 ~ rad/189.479,
+                             magni %in% 0.80 ~ rad/241,
+                             magni %in% 1.00 ~ rad/300.4844,
+                             magni %in% 1.25 ~ rad/375.4688),
+            mrad = case_when(magni %in% 0.63 ~ mrad$x/189.479,
+                             magni %in% 0.80 ~ mrad$x/241,
+                             magni %in% 1.00 ~ mrad$x/300.4844,
+                             magni %in% 1.25 ~ mrad$x/375.4688),
+            trad = case_when(magni %in% 0.63 ~ rscale/189.479,
+                             magni %in% 0.80 ~ rscale/241,
+                             magni %in% 1.00 ~ rscale/300.4844,
+                             magni %in% 1.25 ~ rscale/375.4688),
+            pisc = case_when(magni %in% 0.63 ~ piscivory/189.479,
+                             magni %in% 0.80 ~ piscivory/241,
+                             magni %in% 1.00 ~ piscivory/300.4844,
+                             magni %in% 1.25 ~ piscivory/375.4688)
+  )
+
+#if OtoJ pluging----------------------------------------------------------------
+scales_clean_3 <- pikeages_scales3 %>%
+  group_by(id, image)%>%
+  mutate(trad = aggregate(increment, by = list(Category = id), FUN = sum, na.rm = T)) %>%
+  ungroup()%>%
+  transmute(id = as.factor(id),
+            image = image,
+            quality = quality,
+            age = age,
+            i = i,
+            trad = trad,
+            inci = increment,
+            piscivorous = piscivorous,
+            magni = magni,
+            increment = ifelse(age == 0, increment, ifelse(i == "edge", NA, increment)))%>%
+  group_by(id, image) %>%
+  mutate(mrad = aggregate(increment, by = list(Category = id), FUN = sum, na.rm = T))
+         
+
+# Magni: Magnification setting of the microscope for conversion into micrometers
+scales_clean_3 <- scales_clean_3 %>%
+  transmute(id = as.factor(id),
+            image = image,
+            age = age,
+            agei = i,
+            inci = case_when(magni %in% 0.63 ~ inci/189.479,
+                             magni %in% 0.80 ~ inci/241,
+                             magni %in% 1.00 ~ inci/300.4844,
+                             magni %in% 1.25 ~ inci/375.4688),
+            mrad = case_when(magni %in% 0.63 ~ mrad$x/189.479,
+                             magni %in% 0.80 ~ mrad$x/241,
+                             magni %in% 1.00 ~ mrad$x/300.4844,
+                             magni %in% 1.25 ~ mrad$x/375.4688),
+            trad = case_when(magni %in% 0.63 ~ trad$x/189.479,
+                             magni %in% 0.80 ~ trad$x/241,
+                             magni %in% 1.00 ~ trad$x/300.4844,
+                             magni %in% 1.25 ~ trad$x/375.4688),
+            pisc = case_when(magni %in% 0.63 ~ piscivorous/189.479,
+                             magni %in% 0.80 ~ piscivorous/241,
+                             magni %in% 1.00 ~ piscivorous/300.4844,
+                             magni %in% 1.25 ~ piscivorous/375.4688),
+            quality = quality)
+
+# Scale cleanup reader 2
+scales_clean_K <- pikeages_scales_korbi %>%
+  group_by(id, image)%>%
+  mutate(trad = aggregate(increment, by = list(Category = id), FUN = sum, na.rm = T)) %>%
+  ungroup()%>%
+  transmute(id = as.factor(id),
+            image = image,
+            quality = quality,
+            age = age,
+            i = i,
+            trad = trad,
+            inci = increment,
+            piscivorous = piscivorous,
+            magni = magni,
+            increment = ifelse(age == 0, increment, ifelse(i == "edge", NA, increment)))%>%
+  group_by(id, image) %>%
+  mutate(mrad = aggregate(increment, by = list(Category = id), FUN = sum, na.rm = T))
+
+
+scales_clean_K <- scales_clean_K %>%
+  transmute(id = as.factor(id),
+            image = image,
+            age = age,
+            agei = i,
+            inci = case_when(magni %in% 0.63 ~ inci/189.479,
+                             magni %in% 0.80 ~ inci/241,
+                             magni %in% 1.00 ~ inci/300.4844,
+                             magni %in% 1.25 ~ inci/375.4688),
+            mrad = case_when(magni %in% 0.63 ~ mrad$x/189.479,
+                             magni %in% 0.80 ~ mrad$x/241,
+                             magni %in% 1.00 ~ mrad$x/300.4844,
+                             magni %in% 1.25 ~ mrad$x/375.4688),
+            trad = case_when(magni %in% 0.63 ~ trad$x/189.479,
+                             magni %in% 0.80 ~ trad$x/241,
+                             magni %in% 1.00 ~ trad$x/300.4844,
+                             magni %in% 1.25 ~ trad$x/375.4688),
+            pisc = case_when(magni %in% 0.63 ~ piscivorous/189.479,
+                             magni %in% 0.80 ~ piscivorous/241,
+                             magni %in% 1.00 ~ piscivorous/300.4844,
+                             magni %in% 1.25 ~ piscivorous/375.4688),
+            quality = quality)
+
+#Scales single read
+
+scales_clean_4 <- pikeages_scales4 %>%
+  group_by(id)%>%
+  mutate(trad = aggregate(increment, by = list(Category = id), FUN = sum, na.rm = T)) %>%
+  ungroup()%>%
+  transmute(id = as.factor(id),
+            quality = quality,
+            age = age,
+            i = i,
+            trad = trad,
+            inci = increment,
+            piscivorous = piscivorous,
+            increment = ifelse(age == 0, increment, ifelse(i == "edge", NA, increment)))%>%
+  group_by(id) %>%
+  mutate(mrad = aggregate(increment, by = list(Category = id), FUN = sum, na.rm = T))
+
+scales_clean_4 <- scales_clean_4 %>%
+  ungroup()%>%
+  transmute(id = as.factor(id),
+            age = age,
+            agei = i,
+            inci = inci,
+            mrad = mrad$x,
+            trad = trad$x,
+            pisc = piscivorous)
+
+#join with individual pike data
+fishdata <- read.delim("Raw_data/Scales_Oto_data.txt", header = T, 
+                       stringsAsFactors = F)
+names(fishdata) <- tolower(names(fishdata))
+
+oto_comb <- fishdata %>% 
+  inner_join(pikeages_otoplot1, by = "id", keep = F)%>%
+  inner_join(pikeages_combC, by = "id", keep = F)%>%
+  transmute(id = id,
+            sex = sex,
+            weight = weight,
+            TL = tl,
+            date = date,
+            area = area,
+            age_comb1 = age.x,
+            age_combC = age.y,
+            mrad_combo = mrad.x,
+            trad_combo = trad.x,
+            quality_combo1 = quality.x)%>%
+  distinct()
+
+Otoall <- oto_comb %>%
+  inner_join(pikeages_oto_only2, by = "id", keep = F)%>%
+  inner_join(pikeages_oto_onlyK, by = "id", keep = F)%>%
+  transmute(id = id,
+            sex = sex,
+            weight = weight,
+            TL = TL,
+            date = date,
+            area = area,
+            age_comb = age_comb1,
+            age_combC = age_combC,
+            age_oto = age.x,
+            age_otoK = age.y,
+            mrad_comb = mrad_combo,
+            trad_comb = trad_combo,
+            quality = quality_combo1)%>%
+  distinct()
+
+#join in automated age count
+Autoage <- Autoage %>% 
+  transmute(id = BH,
+            sims_id = IDS,
+            age = Ages)
+
+pike_auto <- Otoall %>% 
+  inner_join(Autoage, by = "id", keep = F)%>%
+  transmute(id = id,
+            sex = sex,
+            weight = weight,
+            TL = TL,
+            date = date,
+            area = area,
+            age_ref = age,
+            age_comb = age_comb,
+            age_otoT = age_oto,
+            age_otoK = age_otoK,
+            mrad_comb = mrad_comb,
+            trad_comb = trad_comb,
+            quality = quality)%>%
+  distinct()
+
+pikedata <- pike_auto%>%
+  inner_join(scales_clean_1, by = "id", keep = F)%>%
+  inner_join(scales_clean_K, by = "id", keep = F)%>%
+  group_by(id)%>%
+  transmute(id = id,
+            sex = sex,
+            weight = weight,
+            TL = TL,
+            date = date,
+            area = area,
+            age_ref = age_ref,
+            age_comb = age_comb,
+            age_otoT = age_otoT,
+            age_otoK = age_otoK,
+            age_scaleT = round(mean(age.x),0),
+            age_scaleK = round(mean(age.y),0),
+            mrad_comb = mrad_comb,
+            trad_comb = trad_comb,
+            quality = quality.x)%>%
+  distinct()
+
+#write into Growth tables
+#Otoliths
+
+write.table(pikedata, "Data/Pike_ages_all_with_TL.txt", dec = ".", sep = "\t", row.names = F)
+```
+
 
