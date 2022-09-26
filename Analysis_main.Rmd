@@ -660,8 +660,8 @@ standata_ref_3 = list(
   n_groupmax = as.integer(max(length(growthdata$id)))
 )
 
-# Code location
-stancode1 <- "C:/Users/timor/Nextcloud2/Timo/BODDENHECHT/Chapter 1/Ageing/Ageing Timo/Ageing & growth/GM/Simple_VBGF_TZero.stan"
+# Stan Code path
+stancode1 <- "Stan/Simple_VBGF_TZero.stan"
 
 # Fit models
 fit_ref_1 = stan(stancode1, iter = 10000, data = standata_ref_1)
@@ -804,7 +804,7 @@ standata_scale = list(
 )
 
 # Modeling
-stancode1 <- "C:/Users/timor/Nextcloud2/Timo/BODDENHECHT/Ageing/Ageing Timo/Ageing & growth/GM/Simple_VBGF_TZero.stan"
+stancode1 <- "Stan/Simple_VBGF_TZero.stan"
 
 fit_ref = stan(stancode1, iter = 10000, data = standata_ref)
 fit_oto = stan(stancode1, iter = 10000, data = standata_oto)
