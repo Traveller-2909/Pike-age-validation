@@ -269,6 +269,197 @@ Refcompare
 
 ```
 
+
+## 3.3. Aging accuracy and bias of otoliths and scales
+```{r agebias, include=FALSE}
+# Script for age precision, accuracy and bias metrics & plots
+
+rm(list = ls())
+
+# load data
+pikedata <- read.delim("Data/Pike_ages_all_with_TL_backcalulated.txt", header = T, stringsAsFactors = F)
+
+#Explanation of columns:
+# age_ref: Reference age (automated age counter)
+# age_comb: Reader 1 corroboration age (otoliths + overplotted d18O)
+# age_combC: Reader 3 corroboration age (otoliths + overplotted d18O)
+# age_otoT: Reader 1 visual otolith age estimation
+# age_otoK: Reader 2 visual otolith age estimation
+# age_scaleT: Reader 1 visual scale age estimation
+# age_scaleK: Reader 2 visual scale age estimation
+# mrad.comb: otolith radius at last increment
+# trad.comb: otolith total radius
+# Length_LI: Length at last increment (backcalculation routine below)
+
+pikedata <- pikedata%>%
+  transmute(id = id,
+            TL = TL,
+            Age = age_ref,
+            date = date)
+# Age precision metrics
+AP_scale1_ref <- agePrecision(~age_scaleT + age_ref, data = pikedata)
+AP_scaleK_ref <- agePrecision(~age_scaleK + age_ref, data = pikedata)
+AP_oto1_ref <- agePrecision(~age_otoT + age_ref, data = pikedata)
+AP_otoK_ref <- agePrecision(~age_otoK + age_ref, data = pikedata)
+
+summary(AP_scale1_ref, what = "precision")
+summary(AP_scaleK_ref, what = "precision")
+summary(AP_oto1_ref, what = "precision")
+summary(AP_otoK_ref, what = "precision")
+
+# Signed rank test for CVs
+# Reader 1
+Structure_vs_ref1 <- data.frame("ID" = pikedata$id, "CVOto" = AP_oto1_ref$detail$CV,
+                    "CVScales1" = AP_scale1_ref$detail$CV)
+Structure_vs_ref1 <- Structure_vs_ref1 %>% pivot_longer(!ID, names_to = "structure", values_to = "CV")
+Structure_vs_ref1$structure <- sub("CVOto", "Oto", Structure_vs_ref1$structure)
+Structure_vs_ref1$structure <- sub("CVScales1", "Scales", Structure_vs_ref1$structure)
+
+CVTest1 <- wilcox.test(CV~structure, Structure_vs_ref1)
+
+Structure_vs_refK <- data.frame("ID" = pikedata$id, "CVOto" = AP_otoK_ref$detail$CV,
+                    "CVScales1" = AP_scaleK_ref$detail$CV)
+Structure_vs_refK <- Structure_vs_refK %>% pivot_longer(!ID, names_to = "structure", values_to = "CV")
+Structure_vs_refK$structure <- sub("CVOto", "Oto", Structure_vs_refK$structure)
+Structure_vs_refK$structure <- sub("CVScales1", "Scales", Structure_vs_refK$structure)
+
+CVTestK <- wilcox.test(CV~structure, Structure_vs_refK)
+
+CVTest1
+CVTestK
+
+#Agebias
+ab_scale1_ref <- ageBias(age_scaleT ~ age_ref, data = pikedata, 
+                        ref.lab = "ref", nref.lab = "scales2")
+ab_scaleK_ref <- ageBias(age_scaleK ~ age_ref, data = pikedata, 
+                        ref.lab = "ref", nref.lab = "scalesK")
+ab_oto1_ref <- ageBias(age_otoT ~ age_ref, data = pikedata, 
+                        ref.lab = "ref", nref.lab = "otoT")
+ab_otoK_ref <- ageBias(age_otoK ~ age_ref, data = pikedata, 
+                        ref.lab = "ref", nref.lab = "otoK")
+
+summary(ab_scale1_ref, flip.table = T)
+summary(ab_scale1_ref, what = "symmetry")
+summary(ab_scale1_ref, what = "bias")
+
+summary(ab_scaleK_ref, flip.table = T)
+summary(ab_scaleK_ref, what = "symmetry")
+summary(ab_scaleK_ref, what = "bias")
+
+summary(ab_oto1_ref, flip.table = T)
+summary(ab_oto1_ref, what = "symmetry")
+summary(ab_oto1_ref, what = "bias")
+
+summary(ab_otoK_ref, flip.table = T)
+summary(ab_otoK_ref, what = "symmetry")
+summary(ab_otoK_ref, what = "bias")
+
+# Save data
+save(AP_oto1_ref, AP_otoK_ref, AP_scale1_ref, AP_scaleK_ref, ab_oto1_ref, ab_otoK_ref, ab_scale1_ref, ab_scaleK_ref, file="Data/AgeBias.RData")
+```
+
+```{r agebiastests, include=FALSE}
+rm(list = ls())
+
+# load data---------------------------------------------------------------------------------
+load("Data/AgeBias.RData")
+pikedata <- read.delim("Data/Pike_ages_all_with_TL_backcalulated.txt", header = T, stringsAsFactors = F)
+
+# Age precision metrics---------------------------------------------------------------------
+
+summary(ab_scale1_ref, flip.table = T)
+summary(ab_scale1_ref, what = "symmetry")
+summary(ab_scale1_ref, what = "bias")
+
+summary(ab_scaleK_ref, flip.table = T)
+summary(ab_scaleK_ref, what = "symmetry")
+summary(ab_scaleK_ref, what = "bias")
+
+summary(ab_oto1_ref, flip.table = T)
+summary(ab_oto1_ref, what = "symmetry")
+summary(ab_oto1_ref, what = "bias")
+
+summary(ab_otoK_ref, flip.table = T)
+summary(ab_otoK_ref, what = "symmetry")
+summary(ab_otoK_ref, what = "bias")
+
+
+summary(AP_scale1_ref, what = "precision")
+summary(AP_scaleK_ref, what = "precision")
+summary(AP_oto1_ref, what = "precision")
+summary(AP_otoK_ref, what = "precision")
+
+# Signed rank test for CVs------------------------------------------------------------------
+# Timo
+Structure_vs_ref1 <- data.frame("ID" = pikedata$id, "CVOto" = AP_oto1_ref$detail$CV,
+                    "CVScales1" = AP_scale1_ref$detail$CV)
+Structure_vs_ref1 <- Structure_vs_ref1 %>% pivot_longer(!ID, names_to = "structure", values_to = "CV")
+Structure_vs_ref1$structure <- sub("CVOto", "Oto", Structure_vs_ref1$structure)
+Structure_vs_ref1$structure <- sub("CVScales1", "Scales", Structure_vs_ref1$structure)
+
+CVTest1 <- wilcox.test(CV~structure, Structure_vs_ref1)
+
+Structure_vs_refK <- data.frame("ID" = pikedata$id, "CVOto" = AP_otoK_ref$detail$CV,
+                    "CVScales1" = AP_scaleK_ref$detail$CV)
+Structure_vs_refK <- Structure_vs_refK %>% pivot_longer(!ID, names_to = "structure", values_to = "CV")
+Structure_vs_refK$structure <- sub("CVOto", "Oto", Structure_vs_refK$structure)
+Structure_vs_refK$structure <- sub("CVScales1", "Scales", Structure_vs_refK$structure)
+
+CVTestK <- wilcox.test(CV~structure, Structure_vs_refK)
+```
+
+```{r Table 1 age bias, echo=FALSE,message=FALSE,warning=FALSE,error=FALSE}
+
+rm(list = ls())
+
+load("Data/AgeBias.RData")
+
+Overview_agebias <- cbind(rbind(summary(AP_scale1_ref, what = "precision"),
+                                summary(AP_scaleK_ref, what = "precision"),
+                                summary(AP_oto1_ref, what = "precision"),
+                                summary(AP_otoK_ref, what = "precision")),
+                          rbind(summary(AP_scale1_ref, what = "absolute",,3),
+                                summary(AP_scaleK_ref, what = "absolute",,3), 
+                                summary(AP_oto1_ref, what = "absolute",,3),
+                                summary(AP_otoK_ref, what = "absolute",,3)))
+
+Overview_agebias$sample <- c("Reader 1 scale age",  "Reader 2 scale age", 
+                             "Reader1 otolith age", "Reader 2 otolith age")
+
+Overview_agebias <- data.frame(Overview_agebias)
+Overview_agebias$X1 <- Overview_agebias$X1 + Overview_agebias$X0
+Overview_agebias$X2 <- Overview_agebias$X1 + Overview_agebias$X2
+
+Overview_agebias[,c(3:11)] <- round(Overview_agebias[,c(3:11)], 1)
+Overview_agebias$PercAgree <- paste(Overview_agebias$PercAgree, "%")
+Overview_agebias$X1 <- paste(Overview_agebias$X1, "%")
+Overview_agebias$X2 <- paste(Overview_agebias$X2, "%")
+
+Overview <- flextable(Overview_agebias, col_keys = c("sample", "validn", "PercAgree","X1",
+                                                     "X2", "ACV", "AAD", "APE"))%>%
+  fontsize(part = "all", size = 10)%>%
+  bold(part = "header")%>%
+  set_header_labels(sample = "Structure", 
+                    validn = "N", 
+                    PercAgree = "% agreement",
+                    X1 = "\u00B1 1 year", 
+                    X2 = "\u00B1 2 years", 
+                    ASD = "Average standard deviation",
+                    ACV = "Average coefficient of variation [%]", 
+                    AAD = "Average absolute deviation", 
+                    APE = "Average percent error [%]")%>%
+  set_caption("Summary of aging precision and accuracy metrics")%>%
+  colformat_double(j = "ACV", suffix = "%")%>%
+  colformat_double(j = "APE", suffix = "%")%>%
+  colformat_double(j = "PercAgree", suffix = "%")%>%
+  colformat_double(j = "X1", suffix = "%")%>%
+  colformat_double(j = "X2", suffix = "%")%>%
+  set_table_properties(layout = "autofit")
+
+Overview
+```
+
+
 ```{r Fraser Lee Backcalculation, include=FALSE, eval=FALSE}
 
 # Script to convert length at capture to length at last increment using Fraser Lee equation
