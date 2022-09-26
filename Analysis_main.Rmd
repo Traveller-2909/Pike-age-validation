@@ -10,6 +10,8 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+**All code chunks except for figures used in the publication have "eval=FALSE" set in options, to avoid running the whole script every time a document is knitted. In order to run an indvidual code chunk, change options "eval=FALSE" to "eval=TRUE"**
+
 ```{r packages, include=FALSE}
 library(here)
 library(ggplot2)
@@ -29,4 +31,38 @@ library(loo)
 library("rstan")
 options(mc.cores = parallel::detectCores())
 rstan_options(auto_write = TRUE)
+```
+
+```{r Fraser Lee Backcalculation, include=FALSE, eval=FALSE}
+
+# Script to convert length at capture to length at last increment using Fraser Lee equation
+
+rm(list = ls())
+
+# Read age data with radii
+pikedata <- read.delim("Data/Pike_ages_all_with_TL.txt", header = T, 
+                       stringsAsFactors = F)
+
+# Visual examination
+ggplot(pikedata, aes(log(trad_comb), log(TL))) + geom_point() + theme_minimal()
+ggplot(pikedata, aes(trad_comb, TL)) + geom_point() + theme_minimal()
+
+# Linear model of length at capture vs otolith radius at last increment
+lmOto <- lm(TL~trad_comb, data = pikedata)
+loglmOto <- lm(log(TL)~log(trad_comb), data = pikedata)
+summary(lmOto)
+summary(loglmOto)
+
+# Extract coefficients for Backcalculation
+a <- coefficients(loglmOto)[[1]]
+b <- coefficients(loglmOto)[[2]]
+
+# Add column with backcalculated lengths
+pikedata <- pikedata %>%
+  mutate(Length_LI = exp(log(TL)+b*(log(mrad_comb)-log(trad_comb))))
+pikedata$Length_LI <- ifelse(pikedata$month <= 4, pikedata$TL, pikedata$Length_LI)
+
+# Save table in data
+write.table(pikedata, "Data/Pike_ages_all_with_TL_backcalulated.txt", sep = "\t", 
+            dec = ".", row.names = F)
 ```
