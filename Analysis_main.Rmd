@@ -1100,3 +1100,416 @@ Overviewtable <- flextable(Overview, col_keys = c("sample", "N", "LInf", "k", "t
 
 Overviewtable
 ```
+
+## 3.5. Fisheries management reference points and optimal minimum-length limit
+**Credit for the code for this chapter goes to my coauthor, Dr. Elias Ehrlich**
+```{r model parameters, include=FALSE}
+####################################
+# Parameters - for Age Pike Model
+# Created by: Elias Ehrlich
+####################################
+############
+# Parameters
+############
+Bodden_area = 125200 #according to Rob van Gemerts' data in handover folder #126560 #170000 # [ha] 
+
+a_max = 15                # Maximum age [years]
+#M_min = 0.15              # Minimum adult natural mortality rate [year^-1]
+M_min = 0.25              # Minimum adult natural mortality rate [year^-1]
+theta = 0.5               # Lorenzen size-dependent mortality power (0-1.2)
+#theta = 1.0               # Lorenzen size-dependent mortality power (0-1.2)
+
+alpha_w = 0.0045          # Length-weight scaling constant
+beta_w = 3.107            # Allometric parameter
+
+l_mat = 375               # Length-at-maturation [mm]
+alpha_f = 9.8             # Fecundity-weight scaling constant
+beta_f = 1.12             # Power parameter relating fecundity to weight
+
+R0 = 1.0*10^6             # Average total age-1 recruitment in the unfished stock []
+SexRatioRecruits = 0.5    # females/(females+males)
+CR = 6.1                  # Compensation ratio (paper: Goodyear 1980) []
+
+#lmin_c = 375              # Minimum length at which vulnverable to capture [mm] 
+lmin_c = 400              # Minimum length at which vulnverable to capture [mm] 
+lmax_c = 1500             # Maximum length at which vulnerable to capture [mm]
+#lmin_r = 375              # Minimum length at which vulnverable to capture [mm] 
+lmin_r = 500              # Minimum length vulnerable to harvest [mm]
+lmax_r = 1500             # Maximum length vulnerable to harvest [mm]
+
+l_troph = 1000            # Minimum total length of a trophy fish [mm]
+
+#F_mort = 0.1              # Instantaneous fishing mortality on individuals with selectivity of 1 [year^-1] (current situation)
+F_mort = 0.2              # Instantaneous fishing mortality on individuals with selectivity of 1 [year^-1] (current situation)
+d = 0.078                 # Discard mortality []; e.g. f_h=0.1 --> 10 % of released fish die 
+
+# Growth parameters based on 3 different aging methods using scales, otoliths or the corroborated age, respectively (=3 values for each parameter)
+measure_L8 = c(1236, 1010, 986.0)            # Measured mean asymptotic length L_8 (van Bertalanffy growth function VBGF) [mm] 
+measure_k = c(0.17, 0.28, 0.28)              # Measured VBGF growth coefficient k [year^-1] for scale, otolith and corroborated age, respectively
+measure_t0 = c(-0.4, -0.4, -0.4)             # Measured theoretical age at length of 0 t_0 [years] for scale, otolith and corroborated age, respectively
+sd_L8 = c(198, 85.5, 109.5)                  # Standard deviation of L_8 [mm] of measurement for scale, otolith and corroborated age, respectively
+sd_k = c(0.05, 0.055, 0.08)                  # Standard deviation of k [year^-1] of measurement for scale, otolith and corroborated age, respectively
+sd_t0 = c(0.15, 0.15, 0.15)                  # Standard deviation of t_0 [years] of measurement for scale, otolith and corroborated age, respectively
+
+CI_5_L8 = c(1055.5, 931.7, 889.2)            # 5 % confidence level for L_8 estimates
+CI_95_L8 = c(1451.6, 1102.8, 1108.5)         # 95 % confidence level for L_8 estimates
+CI_5_k = c(0.13, 0.22, 0.21)                 # 5 % confidence level for k estimates
+CI_95_k = c(0.22, 0.34, 0.37)                # 95 % confidence level for k estimates
+CI_5_t0 = c(-0.56, -0.55, -0.58)             # 5 % confidence level for t_0 estimatees
+CI_95_t0 = c(-0.25, -0.25, -0.28)            # 95 % confidence level for t_0 estimates
+
+cv = 0.13                                   # Coefficient of variation in VBGF among individuals
+
+# Random seed number for reproducibility of results
+RandomSeedNr = 126
+```
+
+```{r pike age model & figure 7, echo=FALSE, warning=FALSE, message=FALSE, error=FALSE}
+#############################################################################################################
+# Pike model: Effect of different ageing methods on fishery reference points and optimal minimum length limit  
+# Code author: Elias Ehrlch           
+#############################################################################################################
+
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path)) # set working directory to source file (for using RStudio)
+
+#############################
+# Load Packages and functions
+#############################
+library(matrixStats)
+library(reshape2)
+library(ggplot2)
+library(patchwork)
+
+#########
+# Setting
+#########
+SAVE = 0                  # Set to 1 to save png plot and to 0 if not
+
+##############
+# Loading Data
+##############
+#source("Data/AgePikeModel_Parameters.R") # Import parameters
+
+path = "Data/SimData/FishRefPoints/"
+F_mort_vec = readRDS(file=paste0(path, "F_mort.rds"))               # Scenarios of instantaneous fishing mortalities
+N_vec_rep = readRDS(file=paste0(path, "N_F_mort.rds"))              # Temporal average total stock size
+HarvN_vec_rep = readRDS(file=paste0(path, "HarvN_F_mort.rds"))      # Temporal average harvestable stock size
+VulnN_vec_rep = readRDS(file=paste0(path, "VulnN_F_mort.rds"))      # Temporal average stock size vulnerable to catch
+TrophyN_vec_rep = readRDS(file=paste0(path, "TrophyN_F_mort.rds"))  # Temporal average trophy stock size
+AmountTrophy_vec_rep = readRDS(file=paste0(path, "AmountTrophy_F_mort.rds"))  # Temporal average amount of trophy fish in population
+B_vec_rep = readRDS(file=paste0(path, "B_F_mort.rds"))              # Temporal average total biomass
+Y_vec_rep = readRDS(file=paste0(path, "Y_F_mort.rds"))              # Temporal average yield
+YN_vec_rep = readRDS(file=paste0(path, "YN_F_mort.rds"))            # Temporal average yield
+
+n_meth = dim(N_vec_rep) [3]                 # Number of different aging methods
+n_rep = dim(N_vec_rep) [2]                  # Number of random samples of growth parameters per aging method
+n = dim(N_vec_rep) [1]                      # Number of scenarios of F
+
+########################################
+# Calculating fisheries reference points
+########################################
+# Fishery reference points for each random sample of growth parameters for the n_meth=3 aging methods
+MSY_rep = matrix(NA, n_rep, n_meth)
+F_MSY_rep = matrix(NA, n_rep, n_meth)
+B_MSY_rep = matrix(NA, n_rep, n_meth)
+N_MSY_rep = matrix(NA, n_rep, n_meth)
+HarvN_MSY_rep = matrix(NA, n_rep, n_meth)
+VulnN_MSY_rep = matrix(NA, n_rep, n_meth)
+TrophyN_MSY_rep = matrix(NA, n_rep, n_meth)
+
+YNmax_rep = matrix(NA, n_rep, n_meth) 
+
+for (h in 1:n_meth){
+  MSY_rep[,h] = apply(Y_vec_rep[,,h], 2, max)                 # MSY (=highest temporal mean yield over all scenarios) for each growth parameter sample
+  Index_max = apply(Y_vec_rep[,,h], 2, which.max)             # Index of MSY in output metrix Y_vec_rep[,,h] for each growth parameter sample
+  F_MSY_rep[,h] = F_mort_vec[Index_max]                       # F_MSY for each growth parameter sample
+  for (j in 1:n_rep){
+    B_MSY_rep[j,h] = B_vec_rep[Index_max[j],j,h]              # B_MSY for each growth parameter sample
+    N_MSY_rep[j,h] = N_vec_rep[Index_max[j],j,h]              # N_MSY for each growth parameter sample
+    HarvN_MSY_rep[j,h] = HarvN_vec_rep[Index_max[j],j,h]  
+    VulnN_MSY_rep[j,h] = VulnN_vec_rep[Index_max[j],j,h]  
+    TrophyN_MSY_rep[j,h] = TrophyN_vec_rep[Index_max[j],j,h]
+  }
+  YNmax_rep[,h] = apply(YN_vec_rep[,,h], 2, max)              # Maximum number of harvested fish for each growth parameter sample
+}
+
+########################################
+# Box plots for fishery reference points
+########################################
+F_MSY_data = data.frame(F_MSY_rep)
+MSY_data = data.frame(MSY_rep)
+B_MSY_data = data.frame(B_MSY_rep)
+Methods = c("Scales", "Otoliths", "Corroborated")
+colnames(F_MSY_data) = Methods
+colnames(MSY_data) = Methods
+colnames(B_MSY_data) = Methods
+
+FishRefPoints = data.frame(matrix(NA, n_rep*n_meth, 4))
+colnames(FishRefPoints) = c("F_MSY", "MSY", "B_MSY", "Method")
+FishRefPoints$F_MSY = melt(F_MSY_data)$value
+FishRefPoints$MSY = melt(MSY_data)$value
+FishRefPoints$B_MSY = melt(B_MSY_data)$value
+FishRefPoints$Method = melt(F_MSY_data)$variable
+
+Col_data = c("#E69F00", "#56B4E9", "#999999")
+options(scipen=5)                             # Avoiding notation of numbers as a power of ten on the axes (i.e. no 'e-5') 
+
+p1 <- ggplot(FishRefPoints, aes(x=Method, y=F_MSY, fill=Method)) +
+  geom_boxplot(outlier.shape = NA) + #--> outliers not plotted
+  xlab("Aging method") +
+  ylab(expression(""~ F[MSY] ~" ["~ year^{-1} ~"]")) +
+  scale_fill_manual(values=Col_data) +
+  theme_bw() +
+  coord_cartesian(ylim = c(0.17, 0.28)) +
+  scale_y_continuous(breaks=seq(0.18, 0.28, 0.02)) +
+  theme(legend.position = "none")
+p2 <- ggplot(FishRefPoints, aes(x=Method, y=MSY*1e3/Bodden_area, fill=Method)) +
+  geom_boxplot(outlier.shape = NA) +
+  xlab("Aging method") +
+  ylab(expression("MSY [kg "~ ha^-1 ~ year^{-1} ~"]")) +
+  scale_fill_manual(values=Col_data) +
+  coord_cartesian(ylim = c(0, 8)) +
+  scale_y_continuous(breaks=seq(0, 10, 2)) +
+  theme_bw() +
+  theme(legend.position = "none")
+p3 <- ggplot(FishRefPoints, aes(x=Method, y=B_MSY*1e3/Bodden_area, fill=Method)) +
+  geom_boxplot(outlier.shape = NA) +
+  xlab("Aging method") +
+  ylab(expression(""~ B[MSY] ~" [kg" ~ ha^-1 ~ "]")) +
+  scale_fill_manual(values=Col_data) +
+  coord_cartesian(ylim = c(0, 50)) +
+  theme_bw() +
+  theme(legend.position = "none")
+
+##############
+# Loading Data
+##############
+path = "Data/SimData/MinSizeLim/"
+lmin_r_vec = readRDS(file=paste0(path, "MinSizeLim.rds"))               # Scenarios of instantaneous fishing mortalities
+N_vec_rep = readRDS(file=paste0(path, "N_MinSizeLim.rds"))              # Temporal average total stock size
+HarvN_vec_rep = readRDS(file=paste0(path, "HarvN_MinSizeLim.rds"))      # Temporal average harvestable stock size
+VulnN_vec_rep = readRDS(file=paste0(path, "VulnN_MinSizeLim.rds"))      # Temporal average stock size vulnerable to catch
+TrophyN_vec_rep = readRDS(file=paste0(path, "TrophyN_MinSizeLim.rds"))  # Temporal average trophy stock size
+B_vec_rep = readRDS(file=paste0(path, "B_MinSizeLim.rds"))              # Temporal average total biomass
+Y_vec_rep = readRDS(file=paste0(path, "Y_MinSizeLim.rds"))              # Temporal average yield
+YN_vec_rep = readRDS(file=paste0(path, "YN_MinSizeLim.rds"))            # Temporal average numeric yield
+Utility_vec_rep = readRDS(file=paste0(path, "Utility_MinSizeLim.rds"))  # Temporal average yield
+
+n_meth = dim(N_vec_rep) [3]                 # Number of different aging methods
+n_rep = dim(N_vec_rep) [2]                  # Number of random samples of growth parameters per aging method
+n = dim(N_vec_rep) [1]                      # Number of scenarios of minimum size limits
+
+##########################################
+# Identifying optimal minimum length limit
+##########################################
+MaxUtil_rep = matrix(NA, n_rep, n_meth)
+MinLL_MaxUtil_rep = matrix(NA, n_rep, n_meth)
+
+for (h in 1:n_meth){
+  MaxUtil_rep[,h] = apply(Utility_vec_rep[,,h], 2, max)       # Maximum utility for each growth parameter sample
+  Index_max = apply(Utility_vec_rep[,,h], 2, which.max)       # Index of Maximum utility in output metrix Utility_vec_rep[,,h] for each growth parameter sample
+  MinLL_MaxUtil_rep[,h] = lmin_r_vec[Index_max]               # Optimal minimum length limit for each growth parameter sample
+}
+
+# Mean and sd of maximum utility and optimal minimum length limit from all growth parameter samples 
+MaxUtil_mean_sd = rbind( colMeans(MaxUtil_rep), colSds(MaxUtil_rep) )
+MinLL_MaxUtil_mean_sd = rbind( colMeans(MinLL_MaxUtil_rep), colSds(MinLL_MaxUtil_rep) )
+
+#########################################
+# Box plots for optimal min. length limit
+#########################################
+OptMinLL_data = data.frame(MinLL_MaxUtil_rep)
+Methods = c("Scales", "Otoliths", "Corroborated")
+colnames(OptMinLL_data) = Methods
+
+OptSizeLim = data.frame(matrix(NA, n_rep*n_meth, 2))
+colnames(OptSizeLim) = c("OptMinLL", "Method")
+OptSizeLim$OptMinLL = melt(OptMinLL_data)$value
+OptSizeLim$Method = melt(OptMinLL_data)$variable
+
+p4 <- ggplot(OptSizeLim, aes(x=Method, y=OptMinLL/10, fill=Method)) +
+  geom_boxplot(outlier.shape = NA) + # geom_boxplot(outlier.shape = NA) #--> outliers not plotted
+  xlab("Aging method") +
+  ylab(expression("Optimal min. length limit [cm]")) +
+  scale_fill_manual(values=Col_data) +
+  theme_bw() +
+  #coord_cartesian(ylim = c(0.14, 0.24)) +
+  theme(legend.position = "none")
+
+if(SAVE){png("Plots/FishRefPoints_OptMinLL_Boxplots.png", width = 4000, height = 3400, res=600)}
+
+(p1 + p2) /
+(p3 + p4) + plot_annotation(tag_levels = "a")
+
+if(SAVE){dev.off()}
+
+aggregate(FishRefPoints[, 1:3], list(FishRefPoints$Method), median)
+aggregate(FishRefPoints[, 1:3], list(FishRefPoints$Method), mean)
+aggregate(OptSizeLim[, 1], list(OptSizeLim$Method), median)
+aggregate(OptSizeLim[, 1], list(OptSizeLim$Method), mean)
+```
+
+```{r pike age model & figure 8, echo=FALSE, warning=FALSE, message=FALSE, error=FALSE}
+####################################################################################
+# Pike model: Effect of different age reading methods on fishery reference points  
+# Code author: Elias Ehrlch           
+####################################################################################
+
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path)) # set working directory to source file (for using RStudio)
+
+#############################
+# Load Packages and functions
+#############################
+library(matrixStats)
+library(reshape2)
+library(ggplot2)
+library(patchwork)
+
+#########
+# Setting
+#########
+SAVE = 0                  # Set to 1 to save png plot and to 0 if not
+
+##############
+# Loading Data
+##############
+#source("AgePikeModel_Parameters.R") # Import parameters
+
+path = "Data/SimData/FishRefPoints/"
+F_mort_vec = readRDS(file=paste0(path, "F_mort.rds"))               # Scenarios of instantaneous fishing mortalities
+N_vec_rep = readRDS(file=paste0(path, "N_F_mort.rds"))              # Temporal average total stock size
+HarvN_vec_rep = readRDS(file=paste0(path, "HarvN_F_mort.rds"))      # Temporal average harvestable stock size
+VulnN_vec_rep = readRDS(file=paste0(path, "VulnN_F_mort.rds"))      # Temporal average stock size vulnerable to catch
+TrophyN_vec_rep = readRDS(file=paste0(path, "TrophyN_F_mort.rds"))  # Temporal average trophy stock size
+AmountTrophy_vec_rep = readRDS(file=paste0(path, "AmountTrophy_F_mort.rds"))  # Temporal average amount of trophy fish in population
+B_vec_rep = readRDS(file=paste0(path, "B_F_mort.rds"))              # Temporal average total biomass
+Y_vec_rep = readRDS(file=paste0(path, "Y_F_mort.rds"))              # Temporal average yield
+YN_vec_rep = readRDS(file=paste0(path, "YN_F_mort.rds"))            # Temporal average yield
+
+n_meth = dim(N_vec_rep) [3]                 # Number of different aging methods
+n_rep = dim(N_vec_rep) [2]                  # Number of random samples of growth parameters per aging method
+n = dim(N_vec_rep) [1]                      # Number of scenarios of F
+
+########################################
+# Calculating fisheries reference points
+########################################
+# Fishery reference points for each random sample of growth parameters for the n_meth=3 aging methods
+MSY_rep = matrix(NA, n_rep, n_meth)
+F_MSY_rep = matrix(NA, n_rep, n_meth)
+B_MSY_rep = matrix(NA, n_rep, n_meth)
+N_MSY_rep = matrix(NA, n_rep, n_meth)
+HarvN_MSY_rep = matrix(NA, n_rep, n_meth)
+VulnN_MSY_rep = matrix(NA, n_rep, n_meth)
+TrophyN_MSY_rep = matrix(NA, n_rep, n_meth)
+
+YNmax_rep = matrix(NA, n_rep, n_meth) 
+
+# my.max <- function(x) ifelse( !all(is.na(x)), max(x, na.rm=T), NA) # if every (all) element in x is NA, then NA is returned, and the max otherwise
+
+for (h in 1:n_meth){
+  MSY_rep[,h] = apply(Y_vec_rep[,,h], 2, max)                 # MSY (=highest temporal mean yield over all scenarios) for each growth parameter sample
+  Index_max = apply(Y_vec_rep[,,h], 2, which.max)             # Index of MSY in output metrix Y_vec_rep[,,h] for each growth parameter sample
+  F_MSY_rep[,h] = F_mort_vec[Index_max]                       # F_MSY for each growth parameter sample
+  for (j in 1:n_rep){
+    B_MSY_rep[j,h] = B_vec_rep[Index_max[j],j,h]              # B_MSY for each growth parameter sample
+    N_MSY_rep[j,h] = N_vec_rep[Index_max[j],j,h]              # N_MSY for each growth parameter sample
+    HarvN_MSY_rep[j,h] = HarvN_vec_rep[Index_max[j],j,h]  
+    VulnN_MSY_rep[j,h] = VulnN_vec_rep[Index_max[j],j,h]  
+    TrophyN_MSY_rep[j,h] = TrophyN_vec_rep[Index_max[j],j,h]
+  }
+  YNmax_rep[,h] = apply(YN_vec_rep[,,h], 2, max)              # Maximum number of harvested fish for each growth parameter sample
+}
+
+#################################
+# Plots of output metrices over F
+#################################
+# Function to provide 25% quantile, mean, and 75 % qantile
+MeanIQR <- function(Data){
+  c(round(mean(Data),4), round(quantile(Data, prob=.25),4), round(quantile(Data, prob=.75),4) )
+}
+
+N_mean_IQR = array(NA, dim=c(n, 3, n_meth))                      # Average stock size (Quantiles and mean for all growth parameter samples)
+HarvN_mean_IQR = array(NA, dim=c(n, 3, n_meth))                  # Average harvestable stock size (Quantiles and mean for all growth parameter samples)
+VulnN_mean_IQR = array(NA, dim=c(n, 3, n_meth))                  # Average stock size vulnerable to catch (Quantiles and mean for all growth parameter samples)
+TrophyN_mean_IQR = array(NA, dim=c(n, 3, n_meth))                # Average trophy stock size (Quantiles and mean for all growth parameter samples)
+AmountTrophy_mean_IQR = array(NA, dim=c(n, 3, n_meth))           # Average amount of trophy fish in population (Quantiles and mean for all growth parameter samples)
+B_mean_IQR = array(NA, dim=c(n, 3, n_meth))                      # Average stock biomass (Quantiles and mean for all growth parameter samples)
+Y_mean_IQR = array(NA, dim=c(n, 3, n_meth))                      # Average yield (Quantiles and mean for all growth parameter samples)
+YN_mean_IQR = array(NA, dim=c(n, 3, n_meth))                     # Average numeric yield (Quantiles and mean for all growth parameter samples)
+
+for(h in 1:n_meth){
+  for(i in 1:n){
+    N_mean_IQR[i,,h] = MeanIQR(N_vec_rep[i,,h])                   # Quantiles and mean of average stock size [ind.]
+    HarvN_mean_IQR[i,,h] = MeanIQR(HarvN_vec_rep[i,,h])           # Quantiles and mean of average harvestable stock size [ind.]
+    VulnN_mean_IQR[i,,h] = MeanIQR(VulnN_vec_rep[i,,h])           # Quantiles and mean of average harvestable stock size [ind.]
+    TrophyN_mean_IQR[i,,h] = MeanIQR(TrophyN_vec_rep[i,,h])       # Quantiles and mean of average trophy stock size [ind.]
+    AmountTrophy_mean_IQR[i,,h] = MeanIQR(AmountTrophy_vec_rep[i,,h])       # Quantiles and mean of average amount of trophy fish in population []
+    B_mean_IQR[i,,h] = MeanIQR(B_vec_rep[i,,h])                   # Quantiles and mean of average stock biomass [t]
+    Y_mean_IQR[i,,h] = MeanIQR(Y_vec_rep[i,,h])                   # Quantiles and mean of average yield [t year^-1]
+    YN_mean_IQR[i,,h] = MeanIQR(YN_vec_rep[i,,h])                 # Quantiles and mean of average numeric yield [Ind. year^-1]
+  }
+}
+
+# Plot settings
+ggbg <- function() {                          # for background and grid color of plot
+  points(0, 0, pch=16, cex=1e6, col="white")
+  grid(col="gray95", lty=1)
+}
+
+fontsize_lab = 1.4
+fontsize_axis = 1.2
+linewidth = 2.0
+pointsize = 1.5
+Col_data = c("#E69F00", "#56B4E9", "grey35")
+Col_IQR = adjustcolor(Col_data, alpha.f = 0.2)
+AreaDensLine = c(NA, NA, 35)
+AreaAngleLine = c(NA, NA, 90)
+subplot_labels = c("a", "b", "c")
+
+# Values and labels of plot axes for two different size limits (x-axis) and three different output metrices (y-axis), respectively
+ScalingN = 1e5
+Xlab = expression("Fishing mortality [" ~ year^{-1} ~"]")
+Yax = c(parse(text="Y_mean_IQR*1e3/Bodden_area"), parse(text="B_mean_IQR*1e3/Bodden_area"), parse(text="AmountTrophy_mean_IQR"))
+Ylab = c(expression("Yield [kg" ~ ha^-1 ~ year^{-1} ~ "]"), expression("Biomass [kg" ~ ha^-1 ~ "]"), expression("Amount of fish">="1m"))
+#Y_F_MSY = c(parse(text="MSY"), parse(text="B_MSY"), parse(text="TrophyN_MSY"))
+
+# Plotting function - plot output metrics 'Y' (= Yield, Biomass or Number of trophy fish)
+Plot_func <- function(x, yax, F_MSY, Xlab, Ylab, panel, Col_data, Col_IQR, AreaDensLine, AreaAngleLine, linewidth, pointsize, fontsize_lab, fontsize_axis, subplot_label, LEGEND){
+  # -> Scales - mean and IQR
+  matplot(x, yax[,1,1], xlab=Xlab, ylab=Ylab, panel.first=panel, col=Col_data[1], type='l',
+          lty=1, lwd=linewidth, cex.lab=fontsize_lab, cex.axis=fontsize_axis, ylim=c(0,max(yax)))
+  polygon(c(x, rev(x)), c(yax[,3,1], rev(yax[,2,1])), col=Col_IQR[1], density = AreaDensLine[1], angle = AreaAngleLine[1], border=NA)
+  # -> Otoliths - mean and IQR
+  points(x, yax[,1,2], type='l',  lty=1, lwd=linewidth, col=Col_data[2])
+  polygon(c(x,rev(x)),c(yax[,3,2],rev(yax[,2,2])),col=Col_IQR[2], density = AreaDensLine[2], angle = AreaAngleLine[2], border=NA)
+  # -> Corroborated age - mean and IQR
+  points(x, yax[,1,3], type='l',  lty=1, lwd=linewidth, col=Col_data[3])
+  polygon(c(x,rev(x)),c(yax[,3,3],rev(yax[,2,3])),col=Col_IQR[3], density = AreaDensLine[3], angle = AreaAngleLine[3], border=NA)
+  
+  # for (nn in 1:3){
+  #   segments(F_MSY[nn],0,F_MSY[nn],y_F_MSY[nn],col=Col_data[nn],lty=2)
+  #   points(F_MSY[nn],y_F_MSY[nn],col=Col_data[nn],pch=16,cex=pointsize)         # adding reference point for (F_MSY, MSY)
+  # }
+
+  mtext(subplot_label, adj=-0.27, line=-0.1)
+  
+  if(LEGEND==T) { legend("topright",c("Scales", "Otoliths", "Corroborated"), lty=1, col=Col_data)}
+}
+
+# Plotting - min, mean and max of model output (if no cycles, all 3 appearing as one line)
+if(SAVE){png("Plots/Curves_YieldBiomTrophy_vs_F.png", width = 6000, height = 1800, res=600)}
+par(mfrow=c(1,3),mar=c(4,5,1,1)) #,bty="n")
+
+for(pp in 1:length(Yax)){
+  yax = eval(Yax[pp])
+  if(pp == 2){LEGEND = T} else{LEGEND = F}
+  Plot_func(F_mort_vec, yax, F_MSY[1,], Xlab, Ylab[pp], ggbg(), Col_data, Col_IQR, AreaDensLine, AreaAngleLine, linewidth, pointsize, fontsize_lab, fontsize_axis, subplot_labels[pp], LEGEND)
+}
+
+if(SAVE){dev.off()}
+```
+
+
+
+
+
