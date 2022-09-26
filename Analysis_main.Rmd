@@ -38,7 +38,16 @@ library(sjPlot)
 ```{r moddeledd18Otest, echo=FALSE, include=FALSE, warning=FALSE, eval=FALSE}
 rm(list = ls())
 
-load("Data/Environmental_data.RData")
+MonthsBodden <- read.delim("Data/Mean-TS_lagoons.txt", header = T, 
+                           stringsAsFactors = F, sep = "\t", dec = ".")
+Months_GB <- read.delim("Data/Mean-TS_GB.txt", header = T, 
+                           stringsAsFactors = F, sep = "\t", dec = ".")
+Months_NRB <- read.delim("Data/Mean-TS_NRB.txt", header = T, 
+                           stringsAsFactors = F, sep = "\t", dec = ".")
+Months_WRB <- read.delim("Data/Mean-TS_WRB.txt", header = T, 
+                           stringsAsFactors = F, sep = "\t", dec = ".")
+Aragonite_prediction <- read.delim("Data/Predicted_otolith_d18O.txt", header = T, 
+                           stringsAsFactors = F, sep = "\t", dec = ".")
 
 # Join data from all lagoon areas
 MonthsBodden <- rbind(Months_GB, Months_NRB, Months_WRB)
@@ -118,6 +127,66 @@ summary(Model.final.G)
 
 # Produce summary table
 tab_model(Model.final.G, digits.re = 20)
+```
+
+```{r sensitivity & range, include=FALSE, eval=FALSE}
+# Code for sensitivity & range calculations of d18O prediction equations
+alpha = exp((18.56*1000*((20+273.15)^-1)-33.49)/1000)
+(0.97001*(alpha*(1000-6.5)-1000)-29.99) - (0.97001*(alpha*(1000-6.5+sd(Aragonite_prediction$d18O_station))-1000)-29.99)
+
+alpha = exp((15.99*1000*((20+273.15)^-1)-24.25)/1000)
+(0.97001*(alpha*(1000-6.5)-1000)-29.99) - (0.97001*(alpha*(1000-6.5+sd(Aragonite_prediction$d18O_station))-1000)-29.99)
+
+alpha = exp((18.56*1000*((20+273.15)^-1)-33.49)/1000)
+alpha2 = exp((18.56*1000*((20+sd(Aragonite_prediction$temperature_open)+273.15)^-1)-33.49)/1000)
+(0.97001*(alpha*(1000-6.5)-1000)-29.99) - (0.97001*(alpha2*(1000-6.5)-1000)-29.99)
+
+alpha = exp((15.99*1000*((20+273.15)^-1)-24.25)/1000)
+alpha2 = exp((15.99*1000*((20+sd(Aragonite_prediction$temperature_open)+273.15)^-1)-24.25)/1000)
+(0.97001*(alpha*(1000-6.5)-1000)-29.99) - (0.97001*(alpha2*(1000-6.5)-1000)-29.99)
+
+range(Aragonite_prediction$d18O_station)
+range(Aragonite_prediction$temperature_open)
+
+alpha = exp((18.56*1000*((15+273.15)^-1)-33.49)/1000)
+alpha2 = exp((18.56*1000*((4+273.15)^-1)-33.49)/1000)
+(0.97001*(alpha*(1000-5.3)-1000)-29.99) - (0.97001*(alpha2*(1000-5.3)-1000)-29.99)
+
+(0.97001*(alpha*(1000-6.5)-1000)-29.99) - (0.97001*(alpha*(1000-6.5+(-4.2+6.5))-1000)-29.99)
+```
+
+```{r Figure 2 modelled d18O, echo=FALSE, dpi=600, message=F, warning=F}
+rm(list = ls())
+
+Aragonite_prediction <- read.delim("Data/Predicted_otolith_d18O.txt", header = T, 
+                           stringsAsFactors = F, sep = "\t", dec = ".")
+
+Aragonite_prediction$date <- lubridate::date(parse_date_time(Aragonite_prediction$date, orders = c("ymd")))
+
+text_2020 <- text_grob("2020", size = 15)
+text_2021 <- text_grob("2021", size = 15)
+  
+ggplot(Aragonite_prediction)+
+  geom_line(aes(date, Prediction_Patterson_WRB_VPDB), color = "black", size = 1)+
+  geom_point(aes(date, Prediction_Patterson_WRB_VPDB, shape = "Equation 1"), size = 3)+
+  geom_line(aes(date, Prediction_Geffen_WRB_VPDB), color = "black", size = 1)+
+  geom_point(aes(date, Prediction_Geffen_WRB_VPDB, shape = "Equation 2"), size = 3)+
+  scale_y_continuous(limits = c(-6,-1.5), breaks = seq(-6, -1.5, .5))+
+    coord_cartesian(clip = "off")+
+  annotation_custom(text_2020, xmin = as.Date("2020-04-13"), xmax = as.Date("2020-04-13"), ymin = -8,ymax = -7)+  
+  annotation_custom(text_2021, xmin = as.Date("2021-01-27"), xmax = as.Date("2021-01-27"), ymin = -8,ymax = -7)+
+    scale_x_date(date_breaks = "1 month", 
+                 date_labels = c("Mar", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb"))+
+    scale_shape_manual(name = "", breaks = c("Equation 1", "Equation 2"), values = c(15, 17))+
+  ylab(expression(atop(delta^18*"O"~"modelled aragonite", ("VPDB \u2030"))))+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(),
+        panel.grid.major.x = element_line(size = .5, colour = "grey", linetype = 2),
+        axis.line = element_line(size = 1, colour = "black", linetype = 1), axis.title.y = element_text(size = 15),
+        axis.ticks= element_line(size = 2), axis.text.y = element_text(size = 15, colour = "black"),
+        axis.text.x = element_text(size = 15, colour = "black", angle = 90), axis.ticks.x = element_line(size = 2), 
+        axis.title.x = element_text(size = 15, colour = "white"),
+        legend.position = "bottom", legend.text = element_text(size = 15), legend.title = element_text(size = 15))
+
 ```
 
 ```{r Fraser Lee Backcalculation, include=FALSE, eval=FALSE}
