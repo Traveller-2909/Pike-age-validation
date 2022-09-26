@@ -31,6 +31,93 @@ library(loo)
 library("rstan")
 options(mc.cores = parallel::detectCores())
 rstan_options(auto_write = TRUE)
+library(sjPlot)
+```
+
+## 3.1. Expected $\delta^{18}$O values in otolith aragonite
+```{r moddeledd18Otest, echo=FALSE, include=FALSE, warning=FALSE, eval=FALSE}
+rm(list = ls())
+
+load("Data/Environmental_data.RData")
+
+# Join data from all lagoon areas
+MonthsBodden <- rbind(Months_GB, Months_NRB, Months_WRB)
+
+# Test for significant differences between surface and bottom temperature
+modeldepth <- lm(temperature~depth, data = MonthsBodden)
+anova(modeldepth)
+
+# Transform prediction table to long format
+shorecompare <- Aragonite_prediction%>%
+  pivot_longer(cols = c(temperature_shore, temperature_open), 
+               names_to = "open_shore", values_to = "Temp")%>%
+  transmute(month = month,
+            date = date,
+            site = case_when(open_shore %in% "temperature_shore" ~ "S",
+                             open_shore %in% "temperature_open" ~"O"),
+            temp = Temp)
+
+# Test for differences in shore vs open lagoon temperature  
+modelshore <- lm(temp~site, data = shorecompare)
+anova(modelshore)
+
+# Function to center values
+center_scale <- function(x){
+  scale(x, scale = F)
+}
+
+# Center Temperature & isotope measurements
+Aragonite_prediction$Tcenter <- center_scale(Aragonite_prediction$temperature_open)
+Aragonite_prediction$Dcenter <- center_scale(Aragonite_prediction$d18O_station)
+
+# Mixed linear models for equation 1 (Patterson et al.)
+# Base model
+mR <- lmer(Prediction_Patterson_WRB_VPDB~Dcenter+Tcenter+(1|month), data = Aragonite_prediction)
+
+# Test significance of random effect month
+rand(mR)
+
+# Maximum likelihood estimation for significance testing
+mR <- lmer(Prediction_Patterson_WRB_VPDB~Dcenter+Tcenter+(1|month), data = Aragonite_prediction, REML = F)
+
+# Model without Temperature
+m1.1 <- lmer(Prediction_Patterson_WRB_VPDB~Dcenter+(1|month), data = Aragonite_prediction, REML = F)
+
+# Model without isotope measurements
+m1.2 <- lmer(Prediction_Patterson_WRB_VPDB~Tcenter+(1|month), data = Aragonite_prediction, REML = F)
+
+anova(mR, m1.1) #Temperature significant
+anova(mR, m1.2) #d18O significant
+
+# Mixed linear models for equation 1 (Geffen et al.)
+# Base model
+mR2 <- lmer(Prediction_Geffen_WRB_VPDB~Dcenter+Tcenter+(1|month), data = Aragonite_prediction)
+
+# Test significance of random effect month
+rand(mR2)
+
+# Maximum likelihood estimation for significance testing
+mR2 <- lmer(Prediction_Geffen_WRB_VPDB~Dcenter+Tcenter+(1|month), data = Aragonite_prediction, REML = F)
+
+# Model without Temperature
+m2.1 <- lmer(Prediction_Geffen_WRB_VPDB~Dcenter+(1|month), data = Aragonite_prediction, REML = F)
+
+# Model without isotope measurements
+m2.2 <- lmer(Prediction_Geffen_WRB_VPDB~Tcenter+(1|month), data = Aragonite_prediction, REML = F)
+
+anova(mR2, m2.1) #Temperature significant
+anova(mR2, m2.2) #d18O significant
+
+# Re-run final models with REML
+Model.final.P <- lmer(Prediction_Patterson_WRB_VPDB~Dcenter+Tcenter+(1|month), data = Aragonite_prediction)
+Model.final.G <- lmer(Prediction_Geffen_WRB_VPDB~Dcenter+Tcenter+(1|month), data = Aragonite_prediction)
+
+# Assess summary
+summary(Model.final.P)
+summary(Model.final.G)
+
+# Produce summary table
+tab_model(Model.final.G, digits.re = 20)
 ```
 
 ```{r Fraser Lee Backcalculation, include=FALSE, eval=FALSE}
@@ -66,3 +153,24 @@ pikedata$Length_LI <- ifelse(pikedata$month <= 4, pikedata$TL, pikedata$Length_L
 write.table(pikedata, "Data/Pike_ages_all_with_TL_backcalulated.txt", sep = "\t", 
             dec = ".", row.names = F)
 ```
+
+```{r Loocompare, include=FALSE, eval=FALSE}
+rm(list = ls())
+
+load("Data/LOO_compare.RData")
+
+loos$mod1
+print(loo_compare(loos), simplify = F)
+
+looics = sapply(loos, function(x) x$estimates['looic', 'Estimate'])
+delta_looic = looics - min(looics)
+wi = exp(-0.5*delta_looic) / sum(exp(-0.5*delta_looic))
+Loo <- as.data.frame(round(rbind(looic = looics, dlooic = delta_looic, weight = wi), 2))
+
+Loo <- Loo%>%add_rownames()
+
+Table <- Loo %>% flextable()%>%set_header_labels(rowname="", 
+                                                 mod1="Model 1", 
+                                                 mod2="Model 2",
+                                                 mod3="Model 3")
+save_as_docx(Table, path = "Tables/Loocompare.docx")
