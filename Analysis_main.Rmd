@@ -460,7 +460,103 @@ Overview <- flextable(Overview_agebias, col_keys = c("sample", "validn", "PercAg
 Overview
 ```
 
+```{r Figure 5 agebiasplots, echo=FALSE, message=FALSE, warning=FALSE, error=FALSE, fig.height=6, fig.width=6, dpi=600}
 
+rm(list = ls())
+
+load("Data/AgeBias.RData")
+
+#Otoliths Timo
+a <- ggplot() +
+  geom_hline(yintercept=0,linetype="dashed",color="darkgrey", size = 1) +
+  geom_errorbar(data = ab_oto1_ref$bias.diff, 
+                aes(x=age_ref,ymin=LCI,ymax=UCI,color=sig), width = 0)+
+  geom_point(data = ab_oto1_ref$bias.diff, 
+             aes(x=age_ref, y=mean, color=sig, fill=sig),shape=21, size = 2) +
+  geom_smooth(data=ab_oto1_ref$data,aes(x=age_ref,y=diff),size=.65, color = "black")+
+  scale_fill_manual(values=c("black","white"),guide="none") +
+  scale_color_manual(values=c("black","red3"),guide="none") +
+  scale_x_continuous(breaks=0:15) +
+  scale_y_continuous(limits = c(-6,4), breaks=c(-6:4))+
+  ylab("otolith age - corroborated age")+
+  xlab("corroborated age")+
+  theme(panel.background = element_blank(), 
+        panel.grid.major = element_line(colour = "grey", linetype = "dotted"),
+        panel.border = element_rect(colour = "black", fill = NA),
+        axis.line = element_line(colour = "black", size = 1),
+        axis.title = element_text(colour = "black", size = 10), 
+        axis.text = element_text(colour = "black", size = 10))
+
+#Otoliths Korbi
+b <- ggplot() +
+  geom_hline(yintercept=0,linetype="dashed",color="darkgrey", size = 1) +
+  geom_errorbar(data = ab_otoK_ref$bias.diff, 
+                aes(x=age_ref,ymin=LCI,ymax=UCI,color=sig), width = 0)+
+  geom_point(data = ab_otoK_ref$bias.diff, 
+             aes(x=age_ref, y=mean, color=sig, fill=sig),shape=21, size = 2) +
+  geom_smooth(data=ab_otoK_ref$data,aes(x=age_ref,y=diff),size=.65, color = "black")+
+  scale_fill_manual(values=c("black","white"),guide="none") +
+  scale_color_manual(values=c("black","red3"),guide="none") +
+  scale_x_continuous(breaks=0:15) +
+  scale_y_continuous(limits = c(-6,4), breaks=c(-6:4))+
+  ylab("otolith age - corroborated age")+
+  xlab("corroborated age")+
+  theme(panel.background = element_blank(), 
+        panel.grid.major = element_line(colour = "grey", linetype = "dotted"),
+        panel.border = element_rect(colour = "black", fill = NA),
+        axis.line = element_line(colour = "black", size = 1),
+        axis.title = element_text(colour = "black", size = 10), 
+        axis.text = element_text(colour = "black", size = 10))
+
+#Scales Timo
+c <- ggplot() +
+  geom_hline(yintercept=0,linetype="dashed",color="darkgrey", size = 1) +
+  geom_errorbar(data = ab_scale1_ref$bias.diff, 
+                aes(x=age_ref,ymin=LCI,ymax=UCI,color=sig), width = 0)+
+  geom_point(data = ab_scale1_ref$bias.diff, 
+             aes(x=age_ref, y=mean, color=sig, fill=sig),shape=21, size = 2) +
+  geom_smooth(data=ab_scale1_ref$data,aes(x=age_ref,y=diff),size=.65, color = "black")+
+  scale_fill_manual(values=c("black","white"),guide="none") +
+  scale_color_manual(values=c("black","red3"),guide="none") +
+  scale_x_continuous(breaks=0:15) +
+  scale_y_continuous(limits = c(-6,4), breaks=c(-6:4))+
+  ylab("scale age - corroborated age")+
+  xlab("corroborated age")+
+  theme(panel.background = element_blank(),
+        panel.grid.major = element_line(colour = "grey", linetype = "dotted"),
+        panel.border = element_rect(colour = "black", fill = NA),
+        axis.line = element_line(colour = "black", size = 1),
+        axis.title = element_text(colour = "black", size = 10), 
+        axis.text = element_text(colour = "black", size = 10))
+
+#Scales Korbi
+d <- ggplot() +
+  geom_hline(yintercept=0,linetype="dashed",color="darkgrey", size = 1) +
+  geom_errorbar(data = ab_scaleK_ref$bias.diff, 
+                aes(x=age_ref,ymin=LCI,ymax=UCI,color=sig), width = 0)+
+  geom_point(data = ab_scaleK_ref$bias.diff, 
+             aes(x=age_ref, y=mean, color=sig, fill=sig),shape=21, size = 2) +
+  geom_smooth(data=ab_scaleK_ref$data,aes(x=age_ref,y=diff),size=.65, color = "black")+
+  scale_fill_manual(values=c("black","white"),guide="none") +
+  scale_color_manual(values=c("black","red3"),guide="none") +
+  scale_x_continuous(breaks=0:15) +
+  scale_y_continuous(limits = c(-6,4), breaks=c(-6:4))+
+  ylab("scale age - corroborated age")+
+  xlab("corroborated age")+
+  theme(panel.background = element_blank(), 
+        panel.grid.major =  element_line(colour = "grey", linetype = "dotted"),
+        panel.border = element_rect(colour = "black", fill = NA),
+        axis.line = element_line(colour = "black", size = 1),
+        axis.title = element_text(colour = "black", size = 10), 
+        axis.text = element_text(colour = "black", size = 10))
+
+plots <- ggarrange(a, b, c, d, ncol = 2, nrow = 2, 
+                    labels = c("A", "B", "C", "D"), label.x = 0.9, font.label = list(size = 15))
+
+plots
+```
+
+## 3.4. Population-level growth of pike using age data from different aging structures
 ```{r Fraser Lee Backcalculation, include=FALSE, eval=FALSE}
 
 # Script to convert length at capture to length at last increment using Fraser Lee equation
@@ -495,7 +591,125 @@ write.table(pikedata, "Data/Pike_ages_all_with_TL_backcalulated.txt", sep = "\t"
             dec = ".", row.names = F)
 ```
 
-```{r Loocompare, include=FALSE, eval=FALSE}
+```{r growth model multimodel comparison, include=FALSE}
+# Script to compare prior constellations for growth models
+
+rm(list = ls())
+
+# Load pike data
+pikedata <- read.delim("Data/Pike_ages_all_with_TL_backcalulated.txt", header = T, stringsAsFactors = F)
+
+# Load list of priors (fishbase credible estimates, as of database version December 2021)
+priors <- read.delim("Data/Priors_pike.csv", sep = ";", header = T, stringsAsFactors = F)
+
+# Transform mm to cm
+pikedata$age_oto <- round(rowMeans(pikedata[,c("age_otoT", "age_otoK")]),0)
+pikedata$age_scale <- round(rowMeans(pikedata[,c("age_scaleT", "age_scaleK")]),0)
+pikedata <- pikedata %>% filter(area != "KD")
+
+# Cleanup
+growthdata <- pikedata %>%
+  transmute(id = id,
+            sex = sex,
+            weight = weight,
+            TL = TL/10,
+            L = Length_LI/10,
+            date = date,
+            area = area,
+            age_ref = age_ref,
+            age_oto = age_oto,
+            age_scale = age_scale)
+
+# Write data lists for stan
+#Variance at 10% mean
+standata_ref_1 = list(
+  Length = growthdata$L,
+  Age = growthdata$age_ref,
+  N = nrow(growthdata),
+  linf_mean = 150, #alt: mean^2/variance & variance/mean
+  linf_var = 150/10,
+  t0_mean = mean(priors$to),
+  t0_var = sd(priors$to)^2,
+  k_prior = 1,
+  n_groupmax = as.integer(max(length(growthdata$id)))
+)
+
+#Variance at 5% mean
+standata_ref_2 = list(
+  Length = growthdata$L,
+  Age = growthdata$age_ref,
+  N = nrow(growthdata),
+  linf_mean = 150, #alt: mean^2/variance & variance/mean
+  linf_var = 150/20,
+  t0_mean = mean(priors$to),
+  t0_var = sd(priors$to)^2,
+  k_prior = 1,
+  n_groupmax = as.integer(max(length(growthdata$id)))
+)
+
+#Only error structure
+standata_ref_3 = list(
+  Length = growthdata$L,
+  Age = growthdata$age_ref,
+  N = nrow(growthdata),
+  linf_mean = 0, #alt: mean^2/variance & variance/mean
+  linf_var = 150,
+  t0_mean = 0,
+  t0_var = sd(priors$to)^2,
+  k_prior = 1,
+  n_groupmax = as.integer(max(length(growthdata$id)))
+)
+
+# Code location
+stancode1 <- "C:/Users/timor/Nextcloud2/Timo/BODDENHECHT/Chapter 1/Ageing/Ageing Timo/Ageing & growth/GM/Simple_VBGF_TZero.stan"
+
+# Fit models
+fit_ref_1 = stan(stancode1, iter = 10000, data = standata_ref_1)
+fit_ref_2 = stan(stancode1, iter = 10000, data = standata_ref_2)
+fit_ref_3 = stan(stancode1, iter = 10000, data = standata_ref_3)
+
+# Check
+print(fit_ref_1, pars = c("LInf", "tZero", "k", "sigma" ))
+print(fit_ref_2, pars = c("LInf", "tZero", "k", "sigma" ))
+print(fit_ref_3, pars = c("LInf", "tZero", "k", "sigma" ))
+
+#LOO
+#All model into list for convenience when doing repeated operations
+fits <- list(mod1=fit_ref_1, mod2 = fit_ref_2, mod3 = fit_ref_3)
+
+#Loo object for each model
+loos <- lapply(fits, loo, pars = "log_lik")
+loos$mod1
+print(loo_compare(loos), simplify = F)
+
+looics = sapply(loos, function(x) x$estimates['looic', 'Estimate'])
+delta_looic = looics - min(looics)
+wi = exp(-0.5*delta_looic) / sum(exp(-0.5*delta_looic))
+round(rbind(looic = looics, dlooic = delta_looic, weight = wi), 2)
+
+# Save data
+save(fit_ref_1, fit_ref_2, fit_ref_3, loos, file="Data/LOO_compare.RData")
+```
+
+```{r multimodel eval, include=FALSE}
+load("Data/LOO_compare.RData")
+
+#eval
+pairs(fit_ref_1, pars = c("LInf", "k", "tZero", "sigma"))
+pairs(fit_ref_2, pars = c("LInf", "k", "tZero", "sigma"))
+pairs(fit_ref_3, pars = c("LInf", "k", "tZero", "sigma"))
+
+samples_ref1 <- as.matrix(fit_ref_1, pars=c("LInf", "k", "tZero", "sigma"))
+samples_ref2 <- as.matrix(fit_ref_2, pars=c("LInf", "k", "tZero", "sigma"))
+samples_ref3 <- as.matrix(fit_ref_3, pars=c("LInf", "k", "tZero", "sigma"))
+
+mcmc_combo(samples_ref1, c("hist", "trace"), pars = c("LInf", "k", "tZero", "sigma"))
+mcmc_combo(samples_ref2, c("hist", "trace"), pars = c("LInf", "k", "tZero", "sigma"))
+mcmc_combo(samples_ref3, c("hist", "trace"), pars = c("LInf", "k", "tZero", "sigma"))
+
+```
+
+```{r Compare LOO scores table, include=FALSE, eval=FALSE}
 rm(list = ls())
 
 load("Data/LOO_compare.RData")
@@ -515,3 +729,315 @@ Table <- Loo %>% flextable()%>%set_header_labels(rowname="",
                                                  mod2="Model 2",
                                                  mod3="Model 3")
 save_as_docx(Table, path = "Tables/Loocompare.docx")
+```
+
+```{r growth models, include=FALSE}
+# Script to fit VB growth curve with chosen prior structure to age data sets
+
+rm(list = ls())
+
+# load data
+pikedata <- read.delim("Data/Pike_ages_all_with_TL_backcalulated.txt", header = T, stringsAsFactors = F)
+
+priors <- read.delim("Data/Priors_pike.csv", sep = ";", header = T, stringsAsFactors = F)
+
+# Transform TL mm to TL cm
+pikedata$age_oto <- round(rowMeans(pikedata[,c("age_otoT", "age_otoK")]),0)
+pikedata$age_scale <- round(rowMeans(pikedata[,c("age_scaleT", "age_scaleK")]),0)
+pikedata <- pikedata %>% filter(area != "KD")
+
+# Remove 0
+
+pikedata[pikedata$age_scale == 0,]$age_scale <- 1
+
+# Cleanup
+growthdata <- pikedata %>%
+  transmute(id = id,
+            sex = sex,
+            weight = weight,
+            TL = TL/10,
+            L = Length_LI/10,
+            date = date,
+            area = area,
+            age_ref = age_ref,
+            age_oto = age_oto,
+            age_scale = age_scale)
+
+# Write data lists for stan
+# Reference age
+standata_ref = list(
+  Length = growthdata$L,
+  Age = growthdata$age_ref,
+  N = nrow(growthdata),
+  linf_mean = 150, #alt: mean^2/variance & variance/mean
+  linf_var = 150/10,
+  t0_mean = mean(priors$to),
+  t0_var = sd(priors$to)^2,
+  k_prior = 1,
+  n_groupmax = as.integer(max(length(growthdata$id)))
+)
+
+# Otolith age
+standata_oto = list(
+  Length = growthdata$L,
+  Age = growthdata$age_oto,
+  N = nrow(growthdata),
+  linf_mean = 150, #alt: mean^2/variance & variance/mean
+  linf_var = 150/10,
+  t0_mean = mean(priors$to),
+  t0_var = sd(priors$to)^2,
+  k_prior = 1,
+  n_groupmax = as.integer(max(length(growthdata$id)))
+)
+
+# Scale age
+standata_scale = list(
+  Length = growthdata$L,
+  Age = growthdata$age_scale,
+  N = nrow(growthdata),
+  linf_mean = 150, #alt: mean^2/variance & variance/mean
+  linf_var = 150/10,
+  t0_mean = mean(priors$to),
+  t0_var = sd(priors$to)^2,
+  k_prior = 1,
+  n_groupmax = as.integer(max(length(growthdata$id)))
+)
+
+# Modeling
+stancode1 <- "C:/Users/timor/Nextcloud2/Timo/BODDENHECHT/Ageing/Ageing Timo/Ageing & growth/GM/Simple_VBGF_TZero.stan"
+
+fit_ref = stan(stancode1, iter = 10000, data = standata_ref)
+fit_oto = stan(stancode1, iter = 10000, data = standata_oto)
+fit_scale = stan(stancode1, iter = 10000, data = standata_scale)
+
+# check
+print(fit_ref, pars = c("LInf", "tZero", "k", "sigma" ))
+print(fit_oto, pars = c("LInf", "tZero", "k", "sigma" ))
+print(fit_scale, pars = c("LInf", "tZero", "k", "sigma" ))
+
+#Evaluation
+pairs(fit_ref, pars = c("LInf", "k", "tZero", "sigma"))
+pairs(fit_oto, pars = c("LInf", "k", "tZero", "sigma"))
+pairs(fit_scale, pars = c("LInf", "k", "tZero", "sigma"))
+
+samples_ref <- as.matrix(fit_ref, pars=c("LInf", "k", "tZero", "sigma"))
+samples_oto <- as.matrix(fit_oto, pars=c("LInf", "k", "tZero", "sigma"))
+samples_scale <- as.matrix(fit_scale, pars=c("LInf", "k", "tZero", "sigma"))
+
+mcmc_combo(samples_ref, c("hist", "trace"), pars = c("LInf", "k", "tZero", "sigma"))
+mcmc_combo(samples_oto, c("hist", "trace"), pars = c("LInf", "k", "tZero", "sigma"))
+mcmc_combo(samples_scale, c("hist", "trace"), pars = c("LInf", "k", "tZero", "sigma"))
+
+save(growthdata, fit_ref, fit_oto, fit_scale, samples_ref, samples_oto, samples_scale, file="Data/fit.RData")
+```
+
+```{r Inference, include=FALSE}
+# Code to compare parameter estimates between aging structures
+
+rm(list = ls())
+
+load("Data/fit.RData")
+
+#Transform LINf to array
+sample_LInf1 <- as.array(fit_ref, pars = c("LInf"))
+sample_LInf2 <- as.array(fit_oto, pars = c("LInf"))
+sample_LInf3 <- as.array(fit_scale, pars = c("LInf"))
+
+#Transform k to array
+sample_k1 <- as.array(fit_ref, pars = c("k"))
+sample_k2 <- as.array(fit_oto, pars = c("k"))
+sample_k3 <- as.array(fit_scale, pars = c("k"))
+
+# Transform t0 to array
+sample_tzero1 <- as.array(fit_ref, pars = c("tZero"))
+sample_tzero2 <- as.array(fit_oto, pars = c("tZero"))
+sample_tzero3 <- as.array(fit_scale, pars = c("tZero"))
+
+#Transform sigma (error term) to array
+sample_sigma1 <- as.array(fit_ref, pars = c("sigma"))
+sample_sigma2 <- as.array(fit_oto, pars = c("sigma"))
+sample_sigma3 <- as.array(fit_scale, pars = c("sigma"))
+
+# Compare estimates
+#LInf
+bayesplot_grid((mcmc_intervals(sample_LInf1)), (mcmc_intervals(sample_LInf2)),(mcmc_intervals(sample_LInf3)), xlim = c(80, 150), 
+               titles = c("Reference", "Otoliths", "Scales"))
+
+#k
+bayesplot_grid((mcmc_intervals(sample_k1)), (mcmc_intervals(sample_k2)),(mcmc_intervals(sample_k3)), xlim = c(.1,.6), 
+               titles = c("Reference", "Otoliths", "Scales"))
+
+#t0
+bayesplot_grid((mcmc_intervals(sample_tzero1)), (mcmc_intervals(sample_tzero2)),(mcmc_intervals(sample_tzero3)), xlim = c(0,-1), 
+               titles = c("Reference", "Otoliths", "Scales"))
+
+#sigma
+bayesplot_grid((mcmc_intervals(sample_sigma1)), (mcmc_intervals(sample_sigma2)),(mcmc_intervals(sample_sigma3)), xlim = c(10,20), 
+               titles = c("Reference", "Otoliths", "Scales"))
+
+#area plots are a bit more informative
+#LInf
+bayesplot_grid(mcmc_areas(sample_LInf1, prob = 0.8, prob_outer = 0.90, point_est = "median"),
+               mcmc_areas(sample_LInf2, prob = 0.8, prob_outer = 0.90, point_est = "median"),
+               mcmc_areas(sample_LInf3, prob = 0.8, prob_outer = 0.90, point_est = "median"),
+               xlim = c(80, 150))
+
+#k
+bayesplot_grid(mcmc_areas(sample_k1, prob = 0.8, prob_outer = 0.99, point_est = "median"),
+               mcmc_areas(sample_k2, prob = 0.8, prob_outer = 0.99, point_est = "median"),
+               mcmc_areas(sample_k3, prob = 0.8, prob_outer = 0.99, point_est = "median"),
+               xlim = c(.1, .6))
+
+#t0
+bayesplot_grid(mcmc_areas(sample_tzero1, prob = 0.8, prob_outer = 0.99, point_est = "median"),
+               mcmc_areas(sample_tzero2, prob = 0.8, prob_outer = 0.99, point_est = "median"),
+               mcmc_areas(sample_tzero3, prob = 0.8, prob_outer = 0.99, point_est = "median"),
+               xlim = c(-1, 0))
+
+#sigma
+bayesplot_grid(mcmc_areas(sample_sigma1, prob = 0.8, prob_outer = 0.99, point_est = "median"),
+               mcmc_areas(sample_sigma2, prob = 0.8, prob_outer = 0.99, point_est = "median"),
+               mcmc_areas(sample_sigma3, prob = 0.8, prob_outer = 0.99, point_est = "median"),
+               xlim = c(0, 20))
+```
+
+```{r extract prediction, include=FALSE}
+# Script to extract Length-at-age predictions from growth models for later plotting
+rm(list = ls())
+
+#load data
+load("Data/fit.RData")
+
+# Prediction function
+
+LTpredict<- function(pars, Age){
+  pars[1]*(1-exp(-pars[2]*(Age-pars[3])))
+}
+
+Pred_ref <- t(apply(samples_ref[, c(1, 2, 3)], 1, LTpredict, Age = 0:15))
+Pred_oto <- t(apply(samples_oto[, c(1, 2, 3)], 1, LTpredict, Age = 0:15))
+Pred_scale <- t(apply(samples_scale[, c(1, 2, 3)], 1, LTpredict, Age = 0:15))
+
+Quantile1 <- data.frame(t(apply(Pred_ref, 2, quantile, c(0.5, 0.05, 0.95))))
+colnames(Quantile1) <- c("median", "lower", "upper")
+Quantile1$age <- c(0:15)
+
+
+Quantile2 <- data.frame(t(apply(Pred_oto, 2, quantile, c(0.5, 0.05, 0.95))))
+colnames(Quantile2) <- c("median", "lower", "upper")
+Quantile2$age <- c(0:15)
+
+Quantile3 <- data.frame(t(apply(Pred_scale, 2, quantile, c(0.5, 0.05, 0.95))))
+colnames(Quantile3) <- c("median", "lower", "upper")
+Quantile3$age <- c(0:15)
+
+# Save data object
+save(fit_ref, fit_oto, fit_scale, samples_ref, samples_oto, samples_scale, Quantile1, Quantile2, Quantile3, growthdata, file="Data/Growthmodel.RData")
+```
+
+```{r Figure 6 Growthplots, echo=FALSE, fig.height=3, fig.width=9, dpi=600}
+
+rm(list = ls())
+
+# Load data
+load("Data/Growthmodel.RData")
+
+# Reference curve
+Curve_ref <- ggplot() + xlab("Age (years)") + ylab("Total length (cm)") +
+  geom_ribbon(data = Quantile1, aes(x = age, ymin = lower, ymax = upper), 
+              fill = "#1B9E77", alpha = 0.2)+
+  geom_line(data = Quantile1, aes(x = age, y = median), color = "#1B9E77", size = 1.2)+
+  geom_point(data = growthdata, aes(x = age_ref, y = L), color = "black")+
+  annotate("text", x = 7, y = 50, label = "L[infinity]", parse = T, hjust = 0, color = "black", size = 4.5)+
+  annotate("text", x = 9, y = 50, label = "=", parse = F, hjust = .5, color = "black", size = 4.5)+
+  annotate("text", x = 10, y = 50, label = paste(round(mean(samples_ref[,1]),2), "cm"), parse = F, 
+           hjust = 0, color = "black", size = 4.5)+
+  annotate("text", x = 7, y = 30, label = "k", parse = T, hjust = 0, color = "black", size = 4.5)+
+  annotate("text", x = 9, y = 30, label = "=", parse = F, hjust = .5, color = "black", size = 4.5)+
+  annotate("text", x = 10, y = 30, label = round(mean(samples_ref[,2]),2), parse = F, 
+           hjust = 0, color = "black", size = 4.5)+
+  annotate("text", x = 7, y = 10, label = "t[0]", parse = T, hjust = 0, color = "black", size = 4.5)+
+  annotate("text", x = 9, y = 10, label = "=", parse = F, hjust = .5, color = "black", size = 4.5)+
+  annotate("text", x = 10, y = 10, label = paste(round(mean(samples_ref[,3]),2), "yr"), parse = F, 
+           hjust = 0, color = "black", size = 4.5)+
+  scale_x_continuous(expand = c(0, 0), limits = c(0, 16), breaks = c(1:15), 
+                     labels = c("1","","3","","5","","7","","9","","11","","13","","15"))+ 
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 140), 
+                     breaks = c(0,15,30,45,60,75,90,105,120),
+                     labels = c("0","","30","","60","","90","","120"))+
+  theme(axis.line = element_line(size = 1, colour = "black", linetype = 1),
+        axis.ticks = element_line(size = 1, colour = "black"),
+        axis.text = element_text(size = 15, colour = "black"),
+        axis.title.x = element_text(size = 15, face = "bold"),
+        axis.title.y = element_text(size = 15, face = "bold"),
+        panel.background = element_blank(),
+        #panel.grid.major = element_line(color = "grey", linetype = 3, size = .2),
+        plot.title = element_text(size = 15, vjust = -5, hjust = 0.1))
+
+# Otolith curve
+Curve_oto <- ggplot() + xlab("Age (years)") + ylab("Total length (cm)") +
+  geom_ribbon(data = Quantile2, aes(x = age, ymin = lower, ymax = upper), fill = "#D95F02", alpha = 0.2)+
+  geom_line(data = Quantile2, aes(x = age, y = median), color = "#D95F02", size = 1.2)+
+  geom_point(data = growthdata, aes(x = age_oto, y = L), color = "black")+
+  geom_ribbon(data = Quantile1, aes(x = age, ymin = lower, ymax = upper), fill = "#1B9E77", alpha = 0.2)+
+  geom_line(data = Quantile1, aes(x = age, y = median), color = "#1B9E77", size = 1.2)+
+  #geom_point(data = pikedata, aes(x = age_comb, y = length_comb), color = "#1B9E77")+
+  annotate("text", x = 7, y = 50, label = "L[infinity]", parse = T, hjust = 0, color = "black", size = 4.5)+
+  annotate("text", x = 9, y = 50, label = "=", parse = F, hjust = .5, color = "black", size = 4.5)+
+  annotate("text", x = 10, y = 50, label = paste(round(mean(samples_oto[,1]),2), "cm"), parse = F, 
+           hjust = 0, color = "black", size = 4.5)+
+  annotate("text", x = 7, y = 30, label = "k", parse = T, hjust = 0, color = "black", size = 4.5)+
+  annotate("text", x = 9, y = 30, label = "=", parse = F, hjust = .5, color = "black", size = 4.5)+
+  annotate("text", x = 10, y = 30, label = round(mean(samples_oto[,2]),2), parse = F, 
+           hjust = 0, color = "black", size = 4.5)+
+  annotate("text", x = 7, y = 10, label = "t[0]", parse = T, hjust = 0, color = "black", size = 4.5)+
+  annotate("text", x = 9, y = 10, label = "=", parse = F, hjust = .5, color = "black", size = 4.5)+
+  annotate("text", x = 10, y = 10, label = paste(round(mean(samples_oto[,3]),2), "yr"), parse = F, 
+           hjust = 0, color = "black", size = 4.5)+
+  scale_x_continuous(expand = c(0, 0), limits = c(0, 16), breaks = c(1:15), 
+                     labels = c("1","","3","","5","","7","","9","","11","","13","","15"))+ 
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 140), breaks = c(0,15,30,45,60,75,90,105,120),
+                     labels = c("0","","30","","60","","90","","120"))+
+  theme(axis.line = element_line(size = 1, colour = "black", linetype = 1),
+        axis.ticks = element_line(size = 1, colour = "black"),
+        axis.text = element_text(size = 15, colour = "black"),
+        axis.title.x = element_text(size = 15, face = "bold"),
+        axis.title.y = element_text(size = 15, face = "bold"),
+        panel.background = element_blank(),
+        #panel.grid.major = element_line(color = "grey", linetype = 3, size = .2),
+        plot.title = element_text(size = 15, vjust = -5, hjust = 0.1))
+
+# Scale curve-------------------------------------------------------------------------------
+Curve_scale <- ggplot() + xlab("Age (years)") + ylab("Total length (cm)") +
+  geom_ribbon(data = Quantile3, aes(x = age, ymin = lower, ymax = upper), fill = "#D95F02", alpha = 0.2)+
+  geom_line(data = Quantile3, aes(x = age, y = median), color = "#D95F02", size = 1.2)+
+  geom_point(data = growthdata, aes(x = age_scale, y = L), color = "black")+
+  geom_ribbon(data = Quantile1, aes(x = age, ymin = lower, ymax = upper), fill = "#1B9E77", alpha = 0.2)+
+  geom_line(data = Quantile1, aes(x = age, y = median), color = "#1B9E77", size = 1.2)+
+  #geom_point(data = pikedata, aes(x = age_comb, y = length_comb), color = "#1B9E77")+
+  annotate("text", x = 7, y = 50, label = "L[infinity]", parse = T, hjust = 0, color = "black", size = 4.5)+
+  annotate("text", x = 9, y = 50, label = "=", parse = F, hjust = .5, color = "black", size = 4.5)+
+  annotate("text", x = 10, y = 50, label = paste(round(mean(samples_scale[,1]),2), "cm"), parse = F, hjust = 0, color = "black", size = 4.5)+
+  annotate("text", x = 7, y = 30, label = "k", parse = T, hjust = 0, color = "black", size = 4.5)+
+  annotate("text", x = 9, y = 30, label = "=", parse = F, hjust = .5, color = "black", size = 4.5)+
+  annotate("text", x = 10, y = 30, label = round(mean(samples_scale[,2]),2), parse = F, hjust = 0, color = "black", size = 4.5)+
+  annotate("text", x = 7, y = 10, label = "t[0]", parse = T, hjust = 0, color = "black", size = 4.5)+
+  annotate("text", x = 9, y = 10, label = "=", parse = F, hjust = .5, color = "black", size = 4.5)+
+  annotate("text", x = 10, y = 10, label = paste(round(mean(samples_scale[,3]),2), "yr"), parse = F, hjust = 0, color = "black", size = 4.5)+
+  scale_x_continuous(expand = c(0, 0), limits = c(0, 16), breaks = c(1:15), 
+                     labels = c("1","","3","","5","","7","","9","","11","","13","","15"))+ 
+  scale_y_continuous(expand = c(0, 0), limits = c(0, 140), breaks = c(0,15,30,45,60,75,90,105,120),
+                     labels = c("0","","30","","60","","90","","120"))+
+  theme(axis.line = element_line(size = 1, colour = "black", linetype = 1),
+        axis.ticks = element_line(size = 1, colour = "black"),
+        axis.text = element_text(size = 15, colour = "black"),
+        axis.title.x = element_text(size = 15, face = "bold"),
+        axis.title.y = element_text(size = 15, face = "bold"),
+        panel.background = element_blank(),
+        #panel.grid.major = element_line(color = "grey", linetype = 3, size = .2),
+        plot.title = element_text(size = 15, vjust = -5, hjust = 0.1))
+
+Curves <- ggarrange(Curve_ref, Curve_oto, Curve_scale, ncol = 3, nrow = 1, 
+                    labels = c("A)", "B)", "C)"), label.x = 0, font.label = list(size = 15))
+Curves
+```
