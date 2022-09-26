@@ -361,11 +361,11 @@ save(AP_oto1_ref, AP_otoK_ref, AP_scale1_ref, AP_scaleK_ref, ab_oto1_ref, ab_oto
 ```{r agebiastests, include=FALSE}
 rm(list = ls())
 
-# load data---------------------------------------------------------------------------------
+# load data
 load("Data/AgeBias.RData")
 pikedata <- read.delim("Data/Pike_ages_all_with_TL_backcalulated.txt", header = T, stringsAsFactors = F)
 
-# Age precision metrics---------------------------------------------------------------------
+# Age precision metrics
 
 summary(ab_scale1_ref, flip.table = T)
 summary(ab_scale1_ref, what = "symmetry")
@@ -389,8 +389,8 @@ summary(AP_scaleK_ref, what = "precision")
 summary(AP_oto1_ref, what = "precision")
 summary(AP_otoK_ref, what = "precision")
 
-# Signed rank test for CVs------------------------------------------------------------------
-# Timo
+# Signed rank test for CVs
+# Reader 1
 Structure_vs_ref1 <- data.frame("ID" = pikedata$id, "CVOto" = AP_oto1_ref$detail$CV,
                     "CVScales1" = AP_scale1_ref$detail$CV)
 Structure_vs_ref1 <- Structure_vs_ref1 %>% pivot_longer(!ID, names_to = "structure", values_to = "CV")
@@ -399,6 +399,7 @@ Structure_vs_ref1$structure <- sub("CVScales1", "Scales", Structure_vs_ref1$stru
 
 CVTest1 <- wilcox.test(CV~structure, Structure_vs_ref1)
 
+# Reader 2
 Structure_vs_refK <- data.frame("ID" = pikedata$id, "CVOto" = AP_otoK_ref$detail$CV,
                     "CVScales1" = AP_scaleK_ref$detail$CV)
 Structure_vs_refK <- Structure_vs_refK %>% pivot_longer(!ID, names_to = "structure", values_to = "CV")
