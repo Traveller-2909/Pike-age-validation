@@ -1,0 +1,32 @@
+---
+title: "Analysis pike age corroboration"
+author: "TR"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r packages, include=FALSE}
+library(here)
+library(ggplot2)
+library(tidyverse)
+library(foreign)
+library(lubridate)
+library(car)
+library(FSA)
+library(flextable)
+library(lme4)
+library(ggpubr)
+library(tidymodels)
+library(nlstools)
+library(bayesplot)
+library(RColorBrewer)
+library(loo)
+library("rstan")
+options(mc.cores = parallel::detectCores())
+rstan_options(auto_write = TRUE)
+```
